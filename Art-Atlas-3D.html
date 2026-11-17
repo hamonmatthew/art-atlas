@@ -1,0 +1,731 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Art Atlas · 3D Spatial Explorer</title><style>.atlas-tools{position:absolute;right:14px;bottom:14px;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;z-index:8}.atlas-tools button{background:#202b34;color:#e2ad77;border:1px solid #65503b;border-radius:5px;padding:8px 10px;cursor:pointer}
+/* Shared 2D/3D sidebar and map controls */
+main>.side.left,#movement-view>.side.left{display:flex;flex-direction:column;min-height:0}
+main>.side.left>.atlas-export-controls,#movement-view>.side.left>.atlas-export-controls{order:99;margin-top:auto;padding-top:20px;margin-bottom:0;border-bottom:0;border-top:1px solid #34404a;flex-shrink:0}
+main .tools,#movement-view .mv-controls{position:absolute;right:14px;bottom:14px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end;z-index:10}
+main .tools button,#movement-view .mv-controls button{background:#26313d;color:#e2ad77;border:1px solid #65503b;border-radius:7px;padding:8px 11px;min-height:34px;font-size:12px;font-weight:600;cursor:pointer}
+main .tools button:hover,#movement-view .mv-controls button:hover{background:#334351}
+main .tools button:is(#zoom-in,#zoom-out),#movement-view .mv-controls button:is(#mv-zoom-in,#mv-zoom-out){min-width:35px;font-size:17px}
+main .side.left .chips#lens{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 14px}
+main .side.left .chips#lens button{background:#26313d;color:#dce5eb;border:1px solid #45515c;border-radius:7px;padding:7px 10px;font-size:12px;cursor:pointer}
+main .side.left .chips#lens button.active{background:#e2ad77;color:#151a1f;border-color:#e2ad77}
+
+/* Keep the relationship-lines control on a single line in every view. */
+.side.left label:has(> #mv-lines),
+.side.left label:has(> #edges) { display:flex !important; flex-direction:row !important; align-items:center; gap:7px; white-space:nowrap; }
+.side.left label:has(> #mv-lines) input,
+.side.left label:has(> #edges) input { flex:0 0 auto; margin:0; }
+
+/* Prototype attribution — visible in each standalone and unified header. */
+.atlas-prototype-credit{display:inline-flex;align-items:center;gap:10px;flex-wrap:wrap;font:500 11px/1.3 system-ui,-apple-system,sans-serif;letter-spacing:.04em;color:#b9c5cc;white-space:nowrap}
+.atlas-prototype-label{color:#e2ad77;border:1px solid #80603e;border-radius:4px;padding:3px 7px;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+@media(max-width:850px){.atlas-prototype-credit{white-space:normal;font-size:10px;gap:5px}}
+</style><style>*{box-sizing:border-box}body{margin:0;background:#10151b;color:#e9eceb;font:14px system-ui,sans-serif}header{display:flex;align-items:center;gap:18px;flex-wrap:wrap;padding:14px 22px;border-bottom:1px solid #33404b}h1{font-size:18px;letter-spacing:.12em;margin:0}a{color:#e2ad77}main{display:grid;grid-template-columns:280px minmax(0,1fr) 270px;height:calc(100vh - 64px);min-height:540px}aside{padding:20px;background:#19212a;overflow:auto}aside:first-child{border-right:1px solid #33404b}aside:last-child{border-left:1px solid #33404b}.stage{position:relative;overflow:hidden;background:radial-gradient(circle,#24303b,#10151b 75%)}canvas{width:100%;height:100%;display:block;cursor:grab;touch-action:none}canvas:active{cursor:grabbing}label{display:block;font-size:12px;color:#aeb8c1;margin:18px 0 7px}select,input,button{width:100%;padding:9px;border:1px solid #465665;background:#101820;color:#e9eceb;border-radius:6px}button{cursor:pointer}button:hover{border-color:#e2ad77}input[type=range]{accent-color:#e2ad77;padding:0}h2{font-size:13px;text-transform:uppercase;letter-spacing:.1em;color:#aeb8c1}p{line-height:1.55;color:#b7c2cb;font-size:12px}.hint{position:absolute;left:15px;top:15px;padding:10px 13px;background:#111923d9;border:1px solid #34424e;border-radius:7px;pointer-events:none;font-size:12px;line-height:1.6}.pill{display:inline-block;font-size:11px;padding:5px 7px;border:1px solid #495663;border-radius:12px;margin:3px}.pill.toggle{cursor:pointer;background:#101820;color:#dce5eb}.pill.toggle.active{background:#d6a36b;color:#101820;border-color:#d6a36b;font-weight:700}.pill.toggle:focus-visible{outline:2px solid #fff;outline-offset:2px}.time-window{margin-top:0;padding:0;border:0;border-radius:0;background:transparent}.time-window label{margin:10px 0 5px}.time-window strong{color:#e2ad77}.time-presets button{padding:7px 3px;font-size:11px}.time-presets button.active{background:#d6a36b;color:#101820;border-color:#d6a36b;font-weight:700}.filter-status{padding:10px;background:#111923;border:1px solid #526272;border-radius:7px;margin:12px 0;font-size:12px;line-height:1.5}.filter-actions{display:flex;gap:6px;margin:8px 0}.filter-actions button{font-size:11px;padding:7px}.link{display:block;width:100%;text-align:left;margin:5px 0}.row{display:flex;gap:7px}.row button{flex:1}.note{font-size:11px;color:#9eacb9}#detail h3{font-size:22px;margin-bottom:4px}@media(max-width:950px){main{grid-template-columns:220px 1fr}aside:last-child{grid-column:1/-1;border-top:1px solid #33404b}main{height:auto}.stage{height:620px}}@media(max-width:600px){main{display:flex;flex-direction:column}.stage{height:490px}aside{max-height:none}}
+body.movement-mode main{display:none!important}
+#movement-view{display:none;height:calc(100vh - 77px);min-height:550px;grid-template-columns:290px minmax(0,1fr) 320px;background:#131b22;color:#e6ebed}
+body.movement-mode #movement-view{display:grid}
+#movement-view .side{overflow-y:auto;padding:18px;border-right:1px solid #303b46;background:#172029}
+#movement-view .stage{position:relative;min-width:0;overflow:hidden;background:radial-gradient(circle at center,#1c2732,#10151b 75%)}
+#movement-canvas{display:block;width:100%;height:100%;cursor:move}
+#movement-view .mv-btn{background:#26313d;color:#e9e9e9;border:1px solid #45515c;border-radius:7px;padding:8px 10px;cursor:pointer}
+#movement-view .mv-item{display:block;width:100%;text-align:left;margin:5px 0}
+#movement-view .mv-item.active{border-color:#e2ad77;color:#e2ad77}
+#movement-view .mv-meta{font-size:12px;color:#a4b0ba;line-height:1.6}
+#movement-view .mv-list{max-height:220px;overflow:auto}
+#movement-view .mv-control{width:100%;margin:10px 0}
+#movement-view h3{font-size:21px;margin:6px 0 12px}
+#movement-view h2{font-size:15px;margin:14px 0 9px}
+#movement-view .mv-overlay{position:absolute;top:15px;left:17px;pointer-events:none;color:#d9e0e4;font-size:12px;line-height:1.6}
+#movement-view .mv-controls{position:absolute;bottom:16px;right:16px;display:flex;gap:6px}
+#movement-view .section{margin-top:16px;padding-top:14px;border-top:1px solid #34404a}
+#movement-view label{display:block;font-size:12px;color:#c3cdd4;margin:8px 0}
+#movement-view input[type=search]{width:100%;background:#111a23;border:1px solid #45515c;border-radius:7px;color:#e6ebed;padding:9px}
+#movement-view select{background:#18242d;color:#e6ebed;border:1px solid #45515c;padding:8px}
+#movement-view .mv-tags{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:14px}
+#movement-view .mv-tag-btn{font-size:11px;background:#26313d;color:#d7e0e6;border:1px solid #46535e;border-radius:6px;padding:6px 8px;cursor:pointer}
+#movement-view .mv-tag-btn.on{background:#e2ad77;color:#1c1c1c;border-color:#e2ad77}
+#movement-view .mv-actions{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+#movement-view .mv-presets{display:flex;flex-wrap:wrap;gap:5px;margin:10px 0}
+#movement-view .mv-presets .active{background:#e2ad77;color:#17191d;border-color:#e2ad77}
+#movement-view input[type=range]{width:100%;accent-color:#e2ad77}
+#movement-view h4{font-size:12px;margin:14px 0 5px;color:#c7d1d9;text-transform:uppercase;letter-spacing:.05em}
+.at-mode{display:flex;gap:7px;align-items:center}
+.at-mode button{background:#26313d;border:1px solid #42515d;color:#e6e9ea;padding:9px 13px;border-radius:8px;cursor:pointer}
+.at-mode button.active{background:#e2ad77;color:#13171c;border-color:#e2ad77}
+@media(max-width:850px){#movement-view{grid-template-columns:210px minmax(0,1fr)}#movement-view .right{grid-column:1/-1;max-height:300px}#movement-view .stage{min-height:500px}}
+@media(max-width:560px){body.movement-mode #movement-view{display:grid;grid-template-columns:1fr}#movement-view .stage{min-height:480px}}
+
+#switch-view{display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;color:#e2ad77;text-decoration:none;border:1px solid #65503b;border-radius:7px;padding:9px 12px;font-size:12px;font-weight:600;background:#202b34}#switch-view:hover,#switch-view:focus-visible{background:#33414c;border-color:#e2ad77;outline-offset:3px}
+.atlas-export-controls{display:flex;flex-wrap:wrap;align-items:center;gap:7px;margin:12px 0 18px;padding:10px 0;border-bottom:1px solid #34404a}.atlas-export-controls span{width:100%;font-size:12px;color:#aab7c2}.atlas-export-controls button{background:#26313d;color:#e2ad77;border:1px solid #65503b;border-radius:6px;padding:8px 12px;cursor:pointer}header .at-mode{margin-left:0}header #switch-view{white-space:nowrap}header .muted,header>span:not(#switch-view){margin-left:auto}</style><style id="atlas-shared-control-design">main .tools,#movement-view .mv-controls{position:absolute;right:14px;bottom:14px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end;z-index:10}main .tools button,#movement-view .mv-controls button{appearance:none;background:#26313d;color:#e2ad77;border:1px solid #65503b;border-radius:7px;padding:8px 11px;min-height:34px;font-family:inherit;font-size:12px;font-weight:600;line-height:1.2;cursor:pointer}main .tools button:hover,#movement-view .mv-controls button:hover{background:#334351}main .tools button:is(#zoom-in,#zoom-out),#movement-view .mv-controls button:is(#mv-zoom-in,#mv-zoom-out){min-width:35px;font-size:17px}main .side.left #lens{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 14px}main .side.left #lens button{appearance:none;background:#26313d;color:#dce5eb;border:1px solid #45515c;border-radius:7px;padding:7px 10px;font-family:inherit;font-size:12px;font-weight:400;line-height:1.3;cursor:pointer}main .side.left #lens button.active{background:#e2ad77;color:#151a1f;border-color:#e2ad77}main .side.left #lens button:hover:not(.active){background:#334351}</style><style id="atlas-right-profile-master">
+/* Shared artist profile design — matches the 2D master. */
+main .side.right{padding:20px;overflow-y:auto;background:#19212a;border-left:1px solid #303b46;color:#edf0eb}
+main .side.right>h2{font-size:13px;text-transform:uppercase;letter-spacing:.13em;color:#a4b0ba;margin:0 0 15px}
+main .side.right .profile-name{font-size:25px;line-height:1.2;font-weight:650;margin:0 0 8px;color:#edf0eb}
+main .side.right .profile-meta{font-size:12px;color:#a4b0ba;line-height:1.7}
+main .side.right .muted{color:#a4b0ba;font-size:12px;line-height:1.55}
+main .side.right .attribute-actions{display:flex;gap:7px;flex-wrap:wrap;margin:14px 0}
+main .side.right .smallbtn{font-size:11px;padding:7px 10px;border:1px solid #45515c;background:#26323c;color:#edf0eb;border-radius:6px}
+main .side.right .section{border-top:1px solid #303b46;margin-top:20px;padding-top:19px}
+main .side.right .section h2{font-size:13px;text-transform:uppercase;letter-spacing:.13em;color:#a4b0ba;margin:0 0 15px}
+main .side.right .attribute-toggle{font-size:11px;padding:7px 10px;margin:3px 3px 3px 0;border:1px solid #52616e;border-radius:16px;background:#26323c;color:#e1e6ea;cursor:pointer}
+main .side.right .attribute-toggle.active{background:#e2ad77;color:#111820;border-color:#e2ad77;font-weight:650}
+main .side.right .attribute-status{color:#a4b0ba;font-size:12px;line-height:1.55;margin:14px 0}
+main .side.right .connection{padding:11px 0;border-bottom:1px solid #303b46;cursor:pointer}
+main .side.right .connection strong{font-size:13px;color:#edf0eb}
+main .side.right .connection p{font-size:11px;color:#a4b0ba;line-height:1.5;margin:5px 0}
+main .side.right .connection:hover strong{color:#e2ad77}
+</style><style id="atlas-2d-master-final">
+/* Identical 2D master profile design, applied to 3D's profile markup. */
+main>.side.right{padding:20px;overflow:auto;background:#19212a;border-left:1px solid #303b46}
+main>.side.right>h2{font-size:13px;letter-spacing:.13em;color:#a4b0ba;margin:0 0 15px}
+main>.side.right #detail .profile-name{font-size:25px;line-height:1.2;margin:0 0 8px}
+main>.side.right #detail .profile-meta{font-size:12px;line-height:1.7;color:#a4b0ba}
+main>.side.right #detail .muted{font-size:12px;color:#a4b0ba;line-height:1.55}
+main>.side.right #detail .attribute-actions{display:flex;gap:7px;flex-wrap:wrap;margin:14px 0}
+main>.side.right #detail .attribute-actions button{width:auto;flex:none;padding:7px 10px;font-size:11px;background:#26323c;color:#edf0eb;border:1px solid #45515c;border-radius:6px}
+main>.side.right #detail .section{border-top:1px solid #303b46;margin-top:20px;padding-top:19px}
+main>.side.right #detail .section h2{font-size:13px;letter-spacing:.13em;color:#a4b0ba;margin:0 0 15px}
+main>.side.right #detail .attribute-toggle{display:inline-block;width:auto;max-width:100%;margin:3px;padding:7px 10px;border:1px solid #52616e;border-radius:16px;background:#26323c;color:#e1e6ea;font-size:11px;line-height:1.3}
+main>.side.right #detail .attribute-toggle.active{background:#e2ad77;border-color:#e2ad77;color:#111820;font-weight:650}
+main>.side.right #detail .attribute-status{font-size:12px;color:#a4b0ba;margin:14px 0}
+main>.side.right #detail .connection{padding:11px 0;border-bottom:1px solid #303b46;cursor:pointer}
+main>.side.right #detail .connection strong{font-size:13px;color:#edf0eb}
+main>.side.right #detail .connection p{font-size:11px;color:#a4b0ba;line-height:1.5;margin:5px 0}
+/* Keep navigation compact and horizontal as in 2D, rather than four stacked full-width buttons. */
+main .stage .tools,main .stage .atlas-tools{position:absolute;left:16px;right:auto;bottom:16px;display:flex;flex-direction:row;align-items:center;justify-content:flex-start;gap:6px;flex-wrap:wrap;width:auto;z-index:12}
+main .stage .tools button,main .stage .atlas-tools button{width:auto;flex:none;min-height:34px;padding:8px 11px;background:#26313d;color:#e2ad77;border:1px solid #65503b;border-radius:7px;font-size:12px;font-weight:600}
+main .stage .tools button:is(#zoom-in,#zoom-out),main .stage .atlas-tools button:is(#zoom-in,#zoom-out){min-width:35px;font-size:17px}
+</style><style id="atlas-research-links">.atlas-research-links{display:flex;flex-wrap:wrap;gap:7px;margin:12px 0 18px}.atlas-research-links a{display:inline-flex;align-items:center;padding:7px 10px;border:1px solid #45515c;border-radius:7px;background:#26323c;color:#e2ad77;text-decoration:none;font-size:12px;font-weight:600}.atlas-research-links a:hover{background:#334351;border-color:#e2ad77}</style><style id="atlas-movement-profile-consistency">
+/* Match the 2D profile: inline amber chips, compact actions, readable related links. */
+#movement-view .side.right .mv-actions{display:flex;flex-wrap:wrap;gap:7px;margin:14px 0 20px}
+#movement-view .side.right .mv-actions .mv-btn{display:inline-flex!important;width:auto!important;flex:0 0 auto!important;text-align:center;padding:9px 12px;border-radius:7px;background:#26323c;color:#e9eceb}
+#movement-view .side.right .mv-tags{display:flex!important;flex-direction:row!important;flex-wrap:wrap!important;align-items:flex-start;gap:5px;margin:10px 0 22px}
+#movement-view .side.right .mv-tags .mv-tag-btn{display:inline-flex!important;width:auto!important;flex:0 0 auto!important;max-width:100%;padding:8px 12px!important;margin:0!important;border-radius:24px!important;border:1px solid #52616e;background:#26323c;color:#e1e6ea;font-size:12px;font-weight:600;line-height:1.25}
+#movement-view .side.right .mv-tags .mv-tag-btn.on{background:#e2ad77!important;border-color:#e2ad77!important;color:#161a1f!important}
+#movement-view .side.right h4{margin:22px 0 12px;padding-top:18px;border-top:1px solid #34404a;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:#aab7c2}
+#movement-view .side.right h2{margin:24px 0 14px;padding-top:18px;border-top:1px solid #34404a;letter-spacing:.1em;text-transform:uppercase;font-size:13px;color:#aab7c2}
+#movement-view .side.right .mv-item{display:block;width:100%;padding:10px 0!important;margin:0!important;border:0!important;border-bottom:1px solid #34404a!important;border-radius:0!important;background:transparent!important;text-align:left!important;line-height:1.5;color:#e6eaeb}
+#movement-view .side.right .mv-item:hover{color:#e2ad77!important}
+</style><style id="atlas-movement-profile-consistency">
+/* Match the 2D profile: inline amber chips, compact actions, readable related links. */
+#movement-view .side.right .mv-actions{display:flex;flex-wrap:wrap;gap:7px;margin:14px 0 20px}
+#movement-view .side.right .mv-actions .mv-btn{display:inline-flex!important;width:auto!important;flex:0 0 auto!important;text-align:center;padding:9px 12px;border-radius:7px;background:#26323c;color:#e9eceb}
+#movement-view .side.right .mv-tags{display:flex!important;flex-direction:row!important;flex-wrap:wrap!important;align-items:flex-start;gap:5px;margin:10px 0 22px}
+#movement-view .side.right .mv-tags .mv-tag-btn{display:inline-flex!important;width:auto!important;flex:0 0 auto!important;max-width:100%;padding:8px 12px!important;margin:0!important;border-radius:24px!important;border:1px solid #52616e;background:#26323c;color:#e1e6ea;font-size:12px;font-weight:600;line-height:1.25}
+#movement-view .side.right .mv-tags .mv-tag-btn.on{background:#e2ad77!important;border-color:#e2ad77!important;color:#161a1f!important}
+#movement-view .side.right h4{margin:22px 0 12px;padding-top:18px;border-top:1px solid #34404a;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:#aab7c2}
+#movement-view .side.right h2{margin:24px 0 14px;padding-top:18px;border-top:1px solid #34404a;letter-spacing:.1em;text-transform:uppercase;font-size:13px;color:#aab7c2}
+#movement-view .side.right .mv-item{display:block;width:100%;padding:10px 0!important;margin:0!important;border:0!important;border-bottom:1px solid #34404a!important;border-radius:0!important;background:transparent!important;text-align:left!important;line-height:1.5;color:#e6eaeb}
+#movement-view .side.right .mv-item:hover{color:#e2ad77!important}
+</style><style id="atlas-map-control-consistency">
+/* Same bottom-right map navigation in 2D/3D, artists/movements. */
+main .stage .tools, #movement-view .mv-controls{
+ position:absolute!important;left:auto!important;right:14px!important;
+ top:auto!important;bottom:14px!important;display:flex!important;
+ flex-direction:row!important;flex-wrap:wrap!important;gap:6px!important;
+ align-items:center!important;justify-content:flex-end!important;z-index:15;
+}
+main .stage .tools button,#movement-view .mv-controls button{
+ width:auto!important;min-width:0;flex:none!important;display:inline-block!important;
+ margin:0!important;padding:8px 11px!important;border-radius:7px!important;
+ background:#26313d!important;border:1px solid #65503b!important;
+ color:#e2ad77!important;font-size:12px!important;font-weight:600!important;
+ line-height:1.2!important;
+}
+main .stage .tools button:hover,#movement-view .mv-controls button:hover{background:#334351!important}
+</style><style id="atlas-lens-select-style">#lens{display:block;width:100%;min-height:35px;margin:8px 0 14px;padding:7px 10px;border:1px solid #45515c;border-radius:7px;background:#26313d;color:#dce5eb;font:inherit;font-size:12px}</style><style id="atlas-movement-axes-style">.mv-axis-description{font-size:11px;color:#93a9b9;margin-top:5px}</style><style id="atlas-fixed-movement-axis-style">.mv-fixed-axes{display:grid;gap:9px;margin:12px 0 17px}.mv-fixed-axes div{display:flex;flex-direction:column;gap:2px;font-size:12px}.mv-fixed-axes span{font-size:11px;color:#aeb8c1}</style><style id="atlas-sidebar-consistency">
+/* Shared left-sidebar grouping for 2D/3D Artists and Movements. */
+.side.left > .atlas-sidebar-group, #movement-view .side.left > .atlas-sidebar-group {border-top:1px solid rgba(155,172,186,.32);margin-top:15px;padding-top:15px;}
+.side.left > .atlas-sidebar-group:first-child, #movement-view .side.left > .atlas-sidebar-group:first-child {border-top:0;margin-top:0;padding-top:0;}
+.side.left .atlas-sidebar-group > .section, #movement-view .side.left .atlas-sidebar-group > .section {margin-top:0;padding-top:0;border-top:0;}
+.side.left .atlas-sidebar-group > .atlas-export-controls {margin-top:10px;}
+</style><style id="atlas-left-reference-theme">
+/* Sidebar visual language based on the approved 2D Artists reference. */
+:root{--atlas-side-bg:#19212a;--atlas-side-text:#edf0eb;--atlas-side-muted:#a4b0ba;--atlas-side-line:#303b46;--atlas-side-accent:#e2ad77}
+/* Scope to the three other views so 2D Artists remains the unchanged reference. */
+:is(body.movement-mode #movement-view .side.left,body:not(.movement-mode) main>.side.left.atlas-3d-sidebar,body.movement-mode #movement-view .side.left.atlas-3d-sidebar){background:var(--atlas-side-bg);color:var(--atlas-side-text);font-family:Inter,system-ui,-apple-system,sans-serif;font-size:12px}
+#movement-view .side.left,main>.side.left.atlas-3d-sidebar{background:var(--atlas-side-bg);color:var(--atlas-side-text);font-family:Inter,system-ui,-apple-system,sans-serif;font-size:12px;padding:20px}
+#movement-view .side.left h2,main>.side.left.atlas-3d-sidebar h2{font-size:13px;font-weight:650;text-transform:uppercase;letter-spacing:.13em;color:var(--atlas-side-muted);margin:0 0 15px;line-height:1.4}
+#movement-view .side.left label,main>.side.left.atlas-3d-sidebar label{font-size:12px;color:var(--atlas-side-muted);line-height:1.45;display:block;margin:12px 0 7px;font-weight:400;letter-spacing:normal;text-transform:none}
+#movement-view .side.left :is(.muted,.mv-meta,p),main>.side.left.atlas-3d-sidebar :is(.muted,.mv-meta,p){font-size:12px;color:var(--atlas-side-muted);line-height:1.55}
+#movement-view .side.left :is(input[type=search],select),main>.side.left.atlas-3d-sidebar :is(input[type=search],select){width:100%;background:#111820;color:var(--atlas-side-text);border:1px solid #3b4855;border-radius:7px;padding:8px 10px;font-size:12px;min-height:32px;outline:none;box-shadow:none}
+#movement-view .side.left :is(input[type=search],select):focus,main>.side.left.atlas-3d-sidebar :is(input[type=search],select):focus{border-color:var(--atlas-side-accent)}
+#movement-view .side.left input[type=range],main>.side.left.atlas-3d-sidebar input[type=range]{width:100%;accent-color:var(--atlas-side-accent)}
+#movement-view .side.left :is(button,.mv-btn),main>.side.left.atlas-3d-sidebar button{background:#26323c;color:var(--atlas-side-text);border:1px solid #45515c;border-radius:6px;padding:7px 9px;font-size:11px;font-weight:400;line-height:1.35;cursor:pointer;box-shadow:none;min-height:0;width:auto}
+#movement-view .side.left :is(button,.mv-btn):hover,main>.side.left.atlas-3d-sidebar button:hover{border-color:var(--atlas-side-accent)}
+#movement-view .side.left .atlas-export-controls button,main>.side.left.atlas-3d-sidebar .atlas-export-controls button{background:#26313d;color:#e2ad77;border:1px solid #65503b;border-radius:6px;padding:8px 12px;font-size:12px}
+#movement-view .side.left .atlas-export-controls span,main>.side.left.atlas-3d-sidebar .atlas-export-controls span{font-size:12px;color:#aab7c2}
+#movement-view .side.left .atlas-sidebar-group,main>.side.left.atlas-3d-sidebar .atlas-sidebar-group{border-top:1px solid rgba(155,172,186,.32);margin-top:15px;padding-top:15px}
+#movement-view .side.left .atlas-sidebar-group:first-child,main>.side.left.atlas-3d-sidebar .atlas-sidebar-group:first-child{border-top:0;margin-top:0;padding-top:0}
+#movement-view .side.left .atlas-sidebar-group>.section,main>.side.left.atlas-3d-sidebar .atlas-sidebar-group>.section{border-top:0;margin-top:0;padding-top:0}
+#movement-view .side.left .atlas-export-controls,main>.side.left.atlas-3d-sidebar .atlas-export-controls{border:0;margin:0;padding:0}
+#movement-view .side.left label:has(input[type=checkbox]),main>.side.left.atlas-3d-sidebar label:has(input[type=checkbox]){display:flex;align-items:center;gap:8px;color:var(--atlas-side-text)}
+#movement-view .side.left input[type=checkbox],main>.side.left.atlas-3d-sidebar input[type=checkbox]{accent-color:var(--atlas-side-accent)}
+</style><style id="atlas-unified-sidebar-type">
+/* One typographic scale for the left column in all four views. */
+main > .side.left, #movement-view > .side.left {
+  font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:12px;
+}
+main > .side.left :is(h2,h3,h4), #movement-view > .side.left :is(h2,h3,h4) {
+  font-family:inherit; font-size:13px; font-weight:650; line-height:1.4;
+  letter-spacing:.13em; text-transform:uppercase; color:#a4b0ba;
+}
+main > .side.left :is(input[type="search"],input[type="text"],select),
+#movement-view > .side.left :is(input[type="search"],input[type="text"],select) {
+  font-family:inherit; font-size:12px; font-weight:400; line-height:1.35;
+  letter-spacing:normal; text-transform:none;
+}
+main > .side.left :is(label,.mv-meta,.muted),
+#movement-view > .side.left :is(label,.mv-meta,.muted) {
+  font-family:inherit; font-size:12px; font-weight:400; line-height:1.45;
+  letter-spacing:normal; text-transform:none;
+}
+main > .side.left :is(.atlas-export-controls span),
+#movement-view > .side.left :is(.atlas-export-controls span) {
+  font-family:inherit; font-size:12px; font-weight:400; letter-spacing:normal;
+}
+</style></head><body data-atlas-dimension="3d"><header><h1>ART ATLAS <span style="color:#e2ad77">/ 3D</span></h1><span class="atlas-prototype-credit"><span class="atlas-prototype-label">Prototype</span><span>© Matthew Hamon</span></span><a id="switch-view" href="index.html" title="Switch to the standalone 2D Atlas">2D Atlas</a><div class="at-mode"><button id="artist-mode" class="active">Artists</button><button id="movement-mode">Movements</button></div><span style="color:#aeb8c1;font-size:12px">Spatial Explorer · Experimental</span></header><main><aside class="side left atlas-3d-sidebar"><div class="atlas-sidebar-group"><h2>Explore artists</h2><label>Find an artist</label><input id="search" list="names" placeholder="Search artists…"/><datalist id="names"></datalist></div><div class="atlas-sidebar-group"><label>Relationship lens</label><select aria-label="Relationship lens" id="lens"><option value="all">All relationships</option><option value="theme">Themes</option><option value="aesthetic">Aesthetics</option><option value="process">Processes</option><option value="movement">Movements</option></select><div class="atlas-export-controls"><span>Download map</span><button id="export-png">PNG</button><button id="export-jpeg">JPEG</button></div></div><div class="atlas-sidebar-group"><div class="time-window"><h2 style="margin:0 0 8px">Birth-year range</h2><p class="note" style="margin:5px 0 10px">Filter artists relative to the selected artist’s birth year. The selected artist always remains visible.</p><label>Years before <strong id="yearsBeforeVal">75</strong></label><input id="yearsBefore" max="250" min="0" step="5" type="range" value="75"/><label>Years after <strong id="yearsAfterVal">75</strong></label><input id="yearsAfter" max="250" min="0" step="5" type="range" value="75"/><div aria-live="polite" class="filter-status" id="timeRangeLabel"></div><div class="row time-presets" style="margin-top:10px"><button data-years="25" type="button">±25</button><button data-years="50" type="button">±50</button><button data-years="100" type="button">±100</button><button data-years="250" type="button">All</button></div></div></div><div class="atlas-sidebar-group"><label>Multi-node depth <span id="depthVal">2</span></label><input id="depth" max="4" min="1" type="range" value="2"/><label>Maximum nodes <span id="countVal">20</span></label><input id="count" max="130" min="8" step="1" type="range" value="20"/><label>Minimum connection strength <span id="minVal">20%</span></label><input id="minimum" max="65" min="5" type="range" value="20"/></div><div class="atlas-sidebar-group"><div class="section spatial-settings"><h2>3D viewing options</h2><label>X axis</label><select id="axisX"><option value="time">Time (birth year)</option><option value="aesthetic">Aesthetic</option><option value="theme">Theme</option><option value="process">Process</option><option value="movement">Movement</option></select><label>Y axis</label><select id="axisY"><option value="aesthetic">Aesthetic</option><option value="time">Time (birth year)</option><option value="theme">Theme</option><option value="process">Process</option><option value="movement">Movement</option></select><label>Z axis</label><select id="axisZ"><option value="theme">Theme</option><option value="time">Time (birth year)</option><option value="aesthetic">Aesthetic</option><option value="process">Process</option><option value="movement">Movement</option></select><label>Horizontal axis lock</label><select id="horizontalLock"><option value="none">Unlocked — free 3D rotation</option><option value="X">Lock X to horizontal</option><option value="Y">Lock Y to horizontal</option><option value="Z">Lock Z to horizontal</option></select><label><input checked="" id="edges" type="checkbox"/> Show relationship lines</label><p class="note" id="lockHelp">Lock an axis to keep its values increasing from left to right at a fixed horizontal scale, unaffected by perspective, while rotating the other dimensions. Drag vertically to rotate around the locked axis; drag horizontally to pan.</p></div></div><div class="atlas-sidebar-group"><div class="row"><button id="reset">Chronological front view</button><button id="recenter">Reset network</button></div><p class="note">With X locked, birth years always increase left to right, with no depth-based horizontal distortion. Time increases from earlier years (−X) to later years (+X). When unlocked, the camera may reverse the apparent left/right order when rotated. Use ‘Chronological front view’ to restore earlier → later. Unlocked: drag to rotate. Locked: drag vertically to rotate around the horizontal axis, horizontally to pan. Shift-drag to pan · Scroll to zoom · Click a node to focus. When X is Time, artists are positioned by birth year; rotate to see the chronological axis clearly. Conceptual dimensions are exploratory projections, not objective measurements.</p></div></aside><section class="stage" id="stage"><canvas id="scene" aria-label="Rotatable three-dimensional artist network"></canvas><div class="tools atlas-tools"><button id="zoom-in" aria-label="Zoom in">+</button><button id="zoom-out" aria-label="Zoom out">−</button><button id="fit">Fit window</button><button id="fit-selected" title="Center the selected artist">Center artist</button></div><div class="hint">ARTIST CONSTELLATION<br><span id="status">Loading…</span><br><span style="color:#a8b6c1"><span id="axisLegend">X = Time · Y = Aesthetic · Z = Theme</span></span></div></section><aside class="side right"><h2>Artist profile</h2><div id="detail"></div></aside></main><div id="movement-view"><aside class="side left atlas-3d-sidebar"><div class="atlas-sidebar-group"><h2>Explore movements</h2><input aria-label="Search movements" id="mv-search" placeholder="Search Fauvism, Dada, Bauhaus…" type="search"/><div class="mv-list" id="mv-results"></div></div><div class="atlas-sidebar-group"><div class="section"><h2>Relationship lens</h2><select class="mv-control" id="mv-lens"><option value="all">All relationships</option><option value="history">Historical connections</option><option value="influence">Documented influence (curated)</option><option value="subject">Shared subjects</option><option value="aesthetic">Shared aesthetics</option><option value="approach">Shared ideas / approaches</option><option value="process">Shared processes</option></select><div class="atlas-export-controls"><span>Download map</span><button class="mv-btn" id="mv-export-png">PNG</button><button class="mv-btn" id="mv-export-jpeg">JPEG</button></div></div></div><div class="atlas-sidebar-group"><div class="section"><h2>Movement time range</h2><p class="mv-meta">Relative to the approximate emergence year of the selected movement. Estimated dates are identified in the profile.</p><label>Years before <strong id="mv-before-val">100</strong></label><input id="mv-before" max="250" min="0" step="5" type="range" value="100"/><label>Years after <strong id="mv-after-val">100</strong></label><input id="mv-after" max="250" min="0" step="5" type="range" value="100"/><div class="mv-meta" id="mv-time-label"></div><div class="mv-presets"><button class="mv-btn" data-mv-years="25">±25</button><button class="mv-btn" data-mv-years="50">±50</button><button class="mv-btn" data-mv-years="100">±100</button><button class="mv-btn" data-mv-years="250">All</button></div></div></div><div class="atlas-sidebar-group"><div class="section"><label>Movement multi-node depth <span id="mv-depth-label">2 nodes</span></label><input id="mv-depth" max="4" min="1" type="range" value="2"/><label>Maximum nodes <span id="mv-count-label">20</span></label><input id="mv-count" max="130" min="8" type="range" value="20"/><label>Minimum connection strength <span id="mv-strength-label">20%</span></label><input id="mv-strength" max="65" min="5" step="1" type="range" value="20"/></div></div><div class="atlas-sidebar-group"><div class="section spatial-settings" id="mv-axis-settings"><h2>3D viewing options</h2>
+<label for="mv-axisX">X axis</label><select id="mv-axisX"><option selected="" value="time">Emergence year</option><option value="orientation">Aesthetic orientation (representational ↔ abstract)</option><option value="conceptual">Conceptual orientation (formal ↔ conceptual)</option><option value="subject">Themes</option><option value="aesthetic">Aesthetics</option><option value="approach">Approaches</option><option value="process">Processes</option></select>
+<label for="mv-axisY">Y axis</label><select id="mv-axisY"><option value="time">Emergence year</option><option selected="" value="orientation">Aesthetic orientation (representational ↔ abstract)</option><option value="conceptual">Conceptual orientation (formal ↔ conceptual)</option><option value="subject">Themes</option><option value="aesthetic">Aesthetics</option><option value="approach">Approaches</option><option value="process">Processes</option></select>
+<label for="mv-axisZ">Z axis</label><select id="mv-axisZ"><option value="time">Emergence year</option><option value="orientation">Aesthetic orientation (representational ↔ abstract)</option><option selected="" value="conceptual">Conceptual orientation (formal ↔ conceptual)</option><option value="subject">Themes</option><option value="aesthetic">Aesthetics</option><option value="approach">Approaches</option><option value="process">Processes</option></select>
+<label for="mv-horizontalLock">Horizontal axis lock</label>
+<select id="mv-horizontalLock"><option value="none">Unlocked — free 3D rotation</option><option value="X">Lock X to horizontal</option><option value="Y">Lock Y to horizontal</option><option value="Z">Lock Z to horizontal</option></select>
+<label><input checked="" id="mv-lines" type="checkbox"/> Show relationship lines</label>
+<p class="note">Lock an axis to keep it horizontal and unaffected by perspective. Drag vertically to rotate the other two axes; drag horizontally to pan. Select Unlocked for free rotation.</p>
+<p class="note">Choose the movement data mapped to each axis. Red = X · Blue = Y · Purple = Z. Aesthetic and conceptual orientation are exploratory interpretations, not objective measurements. </p></div></div><div class="atlas-sidebar-group"><div class="section"><h2>Reading the map</h2><p class="mv-meta">Movement proximity is an exploratory similarity model. Historical links are separately curated and labeled. Co-occurrence and shared vocabulary are not evidence of direct influence.</p></div></div></aside><section class="stage" id="mv-stage"><canvas id="movement-canvas" aria-label="Interactive network of art movements"></canvas><div class="mv-overlay"><strong id="mv-map-title">Fauvism and connected movements</strong><div>Drag to rotate · Shift-drag to pan · Scroll to zoom · Select a movement</div><div class="mv-axis-description">X = Emergence year · Y = Aesthetic orientation (representational ↔ abstract) · Z = Conceptual orientation (formal ↔ conceptual)</div></div><div class="mv-controls"><button class="mv-btn" id="mv-zoom-in">+</button><button class="mv-btn" id="mv-zoom-out">−</button><button class="mv-btn" id="mv-fit">Fit window</button><button class="mv-btn" id="mv-center">Center movement</button></div></section><aside class="side right"><h2>Movement profile</h2><div id="mv-profile"></div></aside></div><script id="artist-data" type="application/json">[{"id":0,"name":"Sally Mann","medium":"Photography","born":1951,"country":"United States","theme":["mortality","memory","landscape","body","family"],"aesthetic":["black and white","lyrical"],"process":["wet plate","large format"],"movement":["contemporary photography"]},{"id":1,"name":"Ana Mendieta","medium":"Performance,Earth Art","born":1948,"country":"Cuba","theme":["body","ritual","identity","nature","spirituality"],"aesthetic":["ephemeral","organic"],"process":["performance","earthworks","photography"],"movement":["feminist art","land art"]},{"id":2,"name":"Francesca Woodman","medium":"Photography","born":1958,"country":"United States","theme":["body","identity","memory","absence"],"aesthetic":["surreal","black and white","lyrical"],"process":["self portraiture","long exposure"],"movement":["conceptual photography"]},{"id":3,"name":"Robert Adams","medium":"Photography","born":1937,"country":"United States","theme":["landscape","ecology","place","modernity"],"aesthetic":["black and white","minimal"],"process":["documentary","large format"],"movement":["new topographics"]},{"id":4,"name":"Hiroshi Sugimoto","medium":"Photography","born":1948,"country":"Japan","theme":["time","mortality","memory","perception"],"aesthetic":["minimal","black and white"],"process":["long exposure","large format"],"movement":["conceptual art"]},{"id":5,"name":"Diane Arbus","medium":"Photography","born":1923,"country":"United States","theme":["identity","body","society","otherness"],"aesthetic":["black and white","direct"],"process":["portraiture","documentary"],"movement":["documentary photography"]},{"id":6,"name":"Joel-Peter Witkin","medium":"Photography","born":1939,"country":"United States","theme":["mortality","body","spirituality","identity"],"aesthetic":["surreal","tableau","black and white"],"process":["staged photography","alternative process"],"movement":["constructed photography"]},{"id":7,"name":"Susan Derges","medium":"Photography","born":1955,"country":"United Kingdom","theme":["nature","ecology","time","perception"],"aesthetic":["lyrical","abstract"],"process":["photogram","alternative process"],"movement":["experimental photography"]},{"id":8,"name":"Rinko Kawauchi","medium":"Photography","born":1972,"country":"Japan","theme":["nature","time","mortality","everyday life"],"aesthetic":["lyrical","color"],"process":["photography","sequencing"],"movement":["contemporary photography"]},{"id":9,"name":"W. Eugene Smith","medium":"Photography","born":1918,"country":"United States","theme":["society","ecology","place","identity"],"aesthetic":["black and white","dramatic"],"process":["documentary","photo essay"],"movement":["humanist photography"]},{"id":10,"name":"Cindy Sherman","medium":"Photography","born":1954,"country":"United States","theme":["identity","gender","representation","body"],"aesthetic":["theatrical","cinematic"],"process":["staged photography","self portraiture"],"movement":["pictures generation","feminist art"]},{"id":11,"name":"Carrie Mae Weems","medium":"Photography,Installation","born":1953,"country":"United States","theme":["identity","memory","race","history","power"],"aesthetic":["staged","conceptual"],"process":["photography","text","installation"],"movement":["conceptual art"]},{"id":12,"name":"Lorna Simpson","medium":"Photography,Installation","born":1960,"country":"United States","theme":["identity","gender","representation","history"],"aesthetic":["conceptual","minimal"],"process":["photography","text","collage"],"movement":["conceptual art"]},{"id":13,"name":"Zanele Muholi","medium":"Photography","born":1972,"country":"South Africa","theme":["identity","gender","representation","community"],"aesthetic":["black and white","direct"],"process":["portraiture","documentary"],"movement":["contemporary photography"]},{"id":14,"name":"Nan Goldin","medium":"Photography","born":1953,"country":"United States","theme":["identity","intimacy","memory","community"],"aesthetic":["color","direct"],"process":["snapshot","slide show"],"movement":["contemporary photography"]},{"id":15,"name":"Wolfgang Tillmans","medium":"Photography","born":1968,"country":"Germany","theme":["identity","everyday life","abstraction","perception"],"aesthetic":["abstract","color"],"process":["photography","installation"],"movement":["contemporary photography"]},{"id":16,"name":"Andreas Gursky","medium":"Photography","born":1955,"country":"Germany","theme":["modernity","capitalism","landscape","society"],"aesthetic":["monumental","color"],"process":["digital compositing","large format"],"movement":["dusseldorf school"]},{"id":17,"name":"Bernd and Hilla Becher","medium":"Photography","born":1931,"country":"Germany","theme":["architecture","modernity","archive","place"],"aesthetic":["black and white","typological"],"process":["documentary","seriality"],"movement":["dusseldorf school","conceptual art"]},{"id":18,"name":"Thomas Ruff","medium":"Photography","born":1958,"country":"Germany","theme":["identity","technology","representation","perception"],"aesthetic":["color","typological"],"process":["digital imaging","portraiture"],"movement":["dusseldorf school"]},{"id":19,"name":"August Sander","medium":"Photography","born":1876,"country":"Germany","theme":["identity","society","archive","history"],"aesthetic":["black and white","typological"],"process":["portraiture","documentary"],"movement":["new objectivity"]},{"id":20,"name":"Dorothea Lange","medium":"Photography","born":1895,"country":"United States","theme":["society","history","place","identity"],"aesthetic":["black and white","direct"],"process":["documentary","portraiture"],"movement":["social documentary"]},{"id":21,"name":"Walker Evans","medium":"Photography","born":1903,"country":"United States","theme":["society","place","modernity","history"],"aesthetic":["black and white","direct"],"process":["documentary","large format"],"movement":["documentary photography"]},{"id":22,"name":"Gordon Parks","medium":"Photography,Film","born":1912,"country":"United States","theme":["society","identity","race","history"],"aesthetic":["cinematic","black and white"],"process":["documentary","portraiture","film"],"movement":["social documentary"]},{"id":23,"name":"Robert Frank","medium":"Photography,Film","born":1924,"country":"Switzerland","theme":["society","place","identity","modernity"],"aesthetic":["black and white","expressive"],"process":["documentary","photo book"],"movement":["street photography"]},{"id":24,"name":"Daido Moriyama","medium":"Photography","born":1938,"country":"Japan","theme":["modernity","place","memory","identity"],"aesthetic":["grainy","black and white"],"process":["street photography","photo book"],"movement":["provoke"]},{"id":25,"name":"Shomei Tomatsu","medium":"Photography","born":1930,"country":"Japan","theme":["history","memory","modernity","identity"],"aesthetic":["black and white","expressive"],"process":["documentary","photo essay"],"movement":["postwar japanese photography"]},{"id":26,"name":"Man Ray","medium":"Photography,Painting","born":1890,"country":"United States","theme":["dreams","identity","perception","abstraction"],"aesthetic":["surreal","experimental"],"process":["rayograph","photography","assemblage"],"movement":["dada","surrealism"],"wikidata_id":"Q46139","wikidata_url":"https://www.wikidata.org/wiki/Q46139"},{"id":27,"name":"László Moholy-Nagy","medium":"Photography,Design","born":1895,"country":"Hungary","theme":["technology","perception","abstraction","modernity"],"aesthetic":["geometric","abstract"],"process":["photogram","typography","film"],"movement":["bauhaus","constructivism"]},{"id":28,"name":"Hannah Höch","medium":"Collage","born":1889,"country":"Germany","theme":["gender","identity","power","modernity"],"aesthetic":["fragmented","surreal"],"process":["photomontage","collage"],"movement":["dada"],"wikidata_id":"Q463411","wikidata_url":"https://www.wikidata.org/wiki/Q463411"},{"id":29,"name":"John Heartfield","medium":"Collage,Design","born":1891,"country":"Germany","theme":["power","politics","modernity","society"],"aesthetic":["graphic","fragmented"],"process":["photomontage","graphic design"],"movement":["dada"],"wikidata_id":"Q168671","wikidata_url":"https://www.wikidata.org/wiki/Q168671"},{"id":30,"name":"Marcel Duchamp","medium":"Sculpture,Conceptual Art","born":1887,"country":"France","theme":["representation","authorship","language","modernity"],"aesthetic":["conceptual","minimal"],"process":["readymade","assemblage"],"movement":["dada","conceptual art"],"wikidata_id":"Q5912","wikidata_url":"https://www.wikidata.org/wiki/Q5912"},{"id":31,"name":"Joseph Kosuth","medium":"Conceptual Art","born":1945,"country":"United States","theme":["language","representation","authorship","perception"],"aesthetic":["conceptual","minimal"],"process":["text","installation"],"movement":["conceptual art"]},{"id":32,"name":"Sol LeWitt","medium":"Drawing,Sculpture","born":1928,"country":"United States","theme":["systems","authorship","abstraction","perception"],"aesthetic":["geometric","minimal"],"process":["wall drawing","instructions"],"movement":["minimalism","conceptual art"]},{"id":33,"name":"On Kawara","medium":"Conceptual Art","born":1932,"country":"Japan","theme":["time","memory","existence","language"],"aesthetic":["minimal","serial"],"process":["painting","text","mail art"],"movement":["conceptual art"]},{"id":34,"name":"Roman Opalka","medium":"Painting","born":1931,"country":"France","theme":["time","mortality","existence","systems"],"aesthetic":["minimal","serial"],"process":["painting","documentation"],"movement":["conceptual art"]},{"id":35,"name":"Christian Boltanski","medium":"Installation","born":1944,"country":"France","theme":["memory","mortality","archive","history"],"aesthetic":["ephemeral","dramatic"],"process":["installation","photography","found objects"],"movement":["conceptual art"]},{"id":36,"name":"Doris Salcedo","medium":"Sculpture,Installation","born":1958,"country":"Colombia","theme":["memory","mortality","history","power"],"aesthetic":["minimal","poetic"],"process":["installation","found objects"],"movement":["contemporary art"]},{"id":37,"name":"Felix Gonzalez-Torres","medium":"Installation","born":1957,"country":"Cuba","theme":["mortality","intimacy","memory","identity"],"aesthetic":["minimal","ephemeral"],"process":["installation","participatory art"],"movement":["conceptual art"]},{"id":38,"name":"Rachel Whiteread","medium":"Sculpture","born":1963,"country":"United Kingdom","theme":["memory","absence","architecture","place"],"aesthetic":["minimal","monochrome"],"process":["casting","sculpture"],"movement":["contemporary sculpture"]},{"id":39,"name":"Louise Bourgeois","medium":"Sculpture,Installation","born":1911,"country":"France","theme":["body","memory","identity","family"],"aesthetic":["surreal","organic"],"process":["sculpture","textile","installation"],"movement":["surrealism","feminist art"]},{"id":40,"name":"Eva Hesse","medium":"Sculpture","born":1936,"country":"Germany","theme":["body","abstraction","materiality","ephemerality"],"aesthetic":["organic","minimal"],"process":["latex","fiberglass","sculpture"],"movement":["postminimalism"]},{"id":41,"name":"Robert Smithson","medium":"Earth Art","born":1938,"country":"United States","theme":["landscape","time","entropy","ecology"],"aesthetic":["geometric","monumental"],"process":["earthworks","photography","text"],"movement":["land art"]},{"id":42,"name":"Nancy Holt","medium":"Earth Art,Film","born":1938,"country":"United States","theme":["landscape","time","perception","place"],"aesthetic":["geometric","minimal"],"process":["earthworks","film"],"movement":["land art"]},{"id":43,"name":"Michael Heizer","medium":"Earth Art","born":1944,"country":"United States","theme":["landscape","place","scale","time"],"aesthetic":["monumental","minimal"],"process":["earthworks","sculpture"],"movement":["land art"]},{"id":44,"name":"Walter De Maria","medium":"Earth Art","born":1935,"country":"United States","theme":["landscape","perception","time","systems"],"aesthetic":["minimal","geometric"],"process":["earthworks","installation"],"movement":["land art","minimalism"]},{"id":45,"name":"Richard Long","medium":"Earth Art","born":1945,"country":"United Kingdom","theme":["landscape","time","place","body"],"aesthetic":["minimal","ephemeral"],"process":["walking","earthworks","photography"],"movement":["land art"]},{"id":46,"name":"Andy Goldsworthy","medium":"Earth Art","born":1956,"country":"United Kingdom","theme":["nature","time","ephemerality","ecology"],"aesthetic":["organic","ephemeral"],"process":["site specific","photography"],"movement":["environmental art"]},{"id":47,"name":"Agnes Denes","medium":"Environmental Art","born":1931,"country":"Hungary","theme":["ecology","systems","landscape","politics"],"aesthetic":["conceptual","geometric"],"process":["earthworks","drawing","installation"],"movement":["environmental art","conceptual art"]},{"id":48,"name":"Olafur Eliasson","medium":"Installation","born":1967,"country":"Denmark","theme":["nature","perception","ecology","technology"],"aesthetic":["immersive","light"],"process":["installation","light","site specific"],"movement":["contemporary installation"]},{"id":49,"name":"James Turrell","medium":"Installation","born":1943,"country":"United States","theme":["perception","light","spirituality","space"],"aesthetic":["minimal","immersive"],"process":["light","installation"],"movement":["light and space"]},{"id":50,"name":"Robert Irwin","medium":"Installation","born":1928,"country":"United States","theme":["perception","light","space","place"],"aesthetic":["minimal","immersive"],"process":["installation","site specific"],"movement":["light and space"]},{"id":51,"name":"Yayoi Kusama","medium":"Installation,Painting","born":1929,"country":"Japan","theme":["identity","body","infinity","perception"],"aesthetic":["immersive","patterned"],"process":["installation","painting","performance"],"movement":["avant garde"]},{"id":52,"name":"Marina Abramović","medium":"Performance","born":1946,"country":"Serbia","theme":["body","time","ritual","identity"],"aesthetic":["minimal","durational"],"process":["performance","participatory art"],"movement":["performance art"]},{"id":53,"name":"Yoko Ono","medium":"Performance,Conceptual Art","born":1933,"country":"Japan","theme":["peace","body","language","participation"],"aesthetic":["conceptual","minimal"],"process":["instructions","performance","film"],"movement":["fluxus","conceptual art"]},{"id":54,"name":"Nam June Paik","medium":"Video Art","born":1932,"country":"Korea","theme":["technology","media","perception","modernity"],"aesthetic":["experimental","electronic"],"process":["video","installation"],"movement":["fluxus","video art"]},{"id":55,"name":"Bill Viola","medium":"Video Art","born":1951,"country":"United States","theme":["spirituality","time","mortality","body"],"aesthetic":["cinematic","immersive"],"process":["video","installation"],"movement":["video art"]},{"id":56,"name":"Pipilotti Rist","medium":"Video Art","born":1962,"country":"Switzerland","theme":["body","gender","perception","nature"],"aesthetic":["color","immersive"],"process":["video","installation"],"movement":["video art"]},{"id":57,"name":"Hito Steyerl","medium":"Video Art","born":1966,"country":"Germany","theme":["technology","power","representation","politics"],"aesthetic":["essayistic","digital"],"process":["video","installation","essay"],"movement":["post internet art"]},{"id":58,"name":"Cao Fei","medium":"Video Art","born":1978,"country":"China","theme":["technology","modernity","identity","society"],"aesthetic":["cinematic","digital"],"process":["video","virtual worlds"],"movement":["new media art"]},{"id":59,"name":"Rafael Lozano-Hemmer","medium":"Interactive Art","born":1967,"country":"Mexico","theme":["technology","body","participation","surveillance"],"aesthetic":["immersive","interactive"],"process":["interactive installation","code"],"movement":["new media art"]},{"id":60,"name":"Refik Anadol","medium":"Digital Art","born":1985,"country":"Turkey","theme":["technology","memory","perception","archive"],"aesthetic":["immersive","abstract"],"process":["machine learning","data visualization"],"movement":["generative art"]},{"id":61,"name":"Vera Molnár","medium":"Digital Art","born":1924,"country":"Hungary","theme":["systems","abstraction","technology","authorship"],"aesthetic":["geometric","minimal"],"process":["algorithmic drawing","code"],"movement":["generative art"]},{"id":62,"name":"Frieder Nake","medium":"Digital Art","born":1938,"country":"Germany","theme":["systems","technology","abstraction"],"aesthetic":["geometric","serial"],"process":["plotter","code"],"movement":["generative art"]},{"id":63,"name":"Casey Reas","medium":"Digital Art","born":1972,"country":"United States","theme":["systems","abstraction","technology","authorship"],"aesthetic":["generative","abstract"],"process":["code","software"],"movement":["generative art"]},{"id":64,"name":"Jenny Holzer","medium":"Installation,Text","born":1950,"country":"United States","theme":["language","power","gender","politics"],"aesthetic":["graphic","conceptual"],"process":["text","led","installation"],"movement":["conceptual art"]},{"id":65,"name":"Barbara Kruger","medium":"Collage,Design","born":1945,"country":"United States","theme":["power","gender","consumerism","representation"],"aesthetic":["graphic","appropriation"],"process":["photomontage","text"],"movement":["pictures generation","feminist art"]},{"id":66,"name":"Guerrilla Girls","medium":"Collective,Design","born":1985,"country":"United States","theme":["gender","power","representation","institutions"],"aesthetic":["graphic","appropriation"],"process":["poster","activism"],"movement":["feminist art"]},{"id":67,"name":"Kara Walker","medium":"Installation,Drawing","born":1969,"country":"United States","theme":["race","history","power","identity"],"aesthetic":["silhouette","dramatic"],"process":["cut paper","installation"],"movement":["contemporary art"]},{"id":68,"name":"Kehinde Wiley","medium":"Painting","born":1977,"country":"United States","theme":["identity","race","representation","history"],"aesthetic":["ornate","figurative"],"process":["painting","portraiture"],"movement":["contemporary painting"]},{"id":69,"name":"Amy Sherald","medium":"Painting","born":1973,"country":"United States","theme":["identity","race","representation","portraiture"],"aesthetic":["figurative","color"],"process":["painting","portraiture"],"movement":["contemporary painting"]},{"id":70,"name":"Faith Ringgold","medium":"Painting,Textile","born":1930,"country":"United States","theme":["race","gender","history","memory"],"aesthetic":["narrative","color"],"process":["painting","quilting"],"movement":["feminist art"]},{"id":71,"name":"Betye Saar","medium":"Assemblage","born":1926,"country":"United States","theme":["race","memory","spirituality","history"],"aesthetic":["symbolic","assemblage"],"process":["found objects","assemblage"],"movement":["black arts movement"]},{"id":72,"name":"David Hammons","medium":"Conceptual Art","born":1943,"country":"United States","theme":["race","identity","body","politics"],"aesthetic":["conceptual","ephemeral"],"process":["assemblage","performance"],"movement":["conceptual art"]},{"id":73,"name":"Jean-Michel Basquiat","medium":"Painting","born":1960,"country":"United States","theme":["race","identity","history","power"],"aesthetic":["expressive","graphic"],"process":["painting","drawing"],"movement":["neo expressionism"]},{"id":74,"name":"Mark Bradford","medium":"Painting,Collage","born":1961,"country":"United States","theme":["society","place","race","history"],"aesthetic":["abstract","layered"],"process":["collage","painting"],"movement":["contemporary abstraction"]},{"id":75,"name":"Julie Mehretu","medium":"Painting","born":1970,"country":"Ethiopia","theme":["place","history","politics","systems"],"aesthetic":["abstract","layered"],"process":["painting","drawing"],"movement":["contemporary abstraction"]},{"id":76,"name":"Wassily Kandinsky","medium":"Painting","born":1866,"country":"Russia","theme":["abstraction","spirituality","perception","music"],"aesthetic":["abstract","expressive"],"process":["painting"],"movement":["expressionism","bauhaus"]},{"id":77,"name":"Hilma af Klint","medium":"Painting","born":1862,"country":"Sweden","theme":["spirituality","abstraction","nature","systems"],"aesthetic":["abstract","symbolic"],"process":["painting","drawing"],"movement":["early abstraction"]},{"id":78,"name":"Piet Mondrian","medium":"Painting","born":1872,"country":"Netherlands","theme":["abstraction","systems","spirituality","modernity"],"aesthetic":["geometric","minimal"],"process":["painting"],"movement":["de stijl"]},{"id":79,"name":"Kazimir Malevich","medium":"Painting","born":1879,"country":"Ukraine","theme":["abstraction","spirituality","perception","systems"],"aesthetic":["geometric","minimal"],"process":["painting"],"movement":["suprematism"]},{"id":80,"name":"Sonia Delaunay","medium":"Painting,Design","born":1885,"country":"Ukraine","theme":["abstraction","color","modernity","perception"],"aesthetic":["geometric","color"],"process":["painting","textile","design"],"movement":["orphism"]},{"id":81,"name":"Paul Klee","medium":"Painting","born":1879,"country":"Switzerland","theme":["nature","abstraction","music","systems"],"aesthetic":["lyrical","geometric"],"process":["painting","drawing"],"movement":["bauhaus"]},{"id":82,"name":"Georgia O'Keeffe","medium":"Painting","born":1887,"country":"United States","theme":["nature","body","landscape","place"],"aesthetic":["organic","color"],"process":["painting"],"movement":["american modernism"]},{"id":83,"name":"Frida Kahlo","medium":"Painting","born":1907,"country":"Mexico","theme":["identity","body","memory","gender"],"aesthetic":["surreal","figurative"],"process":["painting","self portraiture"],"movement":["mexican modernism"]},{"id":84,"name":"Leonora Carrington","medium":"Painting","born":1917,"country":"United Kingdom","theme":["dreams","spirituality","gender","nature"],"aesthetic":["surreal","symbolic"],"process":["painting","writing"],"movement":["surrealism"]},{"id":85,"name":"Remedios Varo","medium":"Painting","born":1908,"country":"Spain","theme":["dreams","spirituality","nature","identity"],"aesthetic":["surreal","lyrical"],"process":["painting"],"movement":["surrealism"]},{"id":86,"name":"Salvador Dalí","medium":"Painting","born":1904,"country":"Spain","theme":["dreams","time","identity","perception"],"aesthetic":["surreal","figurative"],"process":["painting"],"movement":["surrealism"]},{"id":87,"name":"René Magritte","medium":"Painting","born":1898,"country":"Belgium","theme":["representation","language","dreams","perception"],"aesthetic":["surreal","figurative"],"process":["painting"],"movement":["surrealism"]},{"id":88,"name":"Max Ernst","medium":"Painting,Collage","born":1891,"country":"Germany","theme":["dreams","nature","abstraction","perception"],"aesthetic":["surreal","experimental"],"process":["frottage","collage","painting"],"movement":["dada","surrealism"],"wikidata_id":"Q154842","wikidata_url":"https://www.wikidata.org/wiki/Q154842"},{"id":89,"name":"Pablo Picasso","medium":"Painting,Sculpture","born":1881,"country":"Spain","theme":["representation","body","identity","modernity"],"aesthetic":["fragmented","abstract"],"process":["painting","collage","sculpture"],"movement":["cubism"]},{"id":90,"name":"Georges Braque","medium":"Painting","born":1882,"country":"France","theme":["representation","abstraction","perception"],"aesthetic":["fragmented","geometric"],"process":["painting","collage"],"movement":["cubism"]},{"id":91,"name":"Hannah Wilke","medium":"Performance,Sculpture","born":1940,"country":"United States","theme":["body","gender","identity","mortality"],"aesthetic":["conceptual","figurative"],"process":["performance","photography","sculpture"],"movement":["feminist art"]},{"id":92,"name":"Carolee Schneemann","medium":"Performance,Film","born":1939,"country":"United States","theme":["body","gender","ritual","identity"],"aesthetic":["expressive","experimental"],"process":["performance","film","painting"],"movement":["feminist art"]},{"id":93,"name":"Judy Chicago","medium":"Installation","born":1939,"country":"United States","theme":["gender","history","identity","community"],"aesthetic":["symbolic","monumental"],"process":["installation","ceramics","textile"],"movement":["feminist art"]},{"id":94,"name":"Mona Hatoum","medium":"Installation","born":1952,"country":"Lebanon","theme":["body","place","identity","power"],"aesthetic":["minimal","uncanny"],"process":["installation","video","sculpture"],"movement":["contemporary art"]},{"id":95,"name":"Ai Weiwei","medium":"Installation,Conceptual Art","born":1957,"country":"China","theme":["power","politics","history","identity"],"aesthetic":["conceptual","monumental"],"process":["installation","photography","readymade"],"movement":["contemporary art"]},{"id":96,"name":"El Anatsui","medium":"Sculpture","born":1944,"country":"Ghana","theme":["history","materiality","consumerism","identity"],"aesthetic":["monumental","abstract"],"process":["assemblage","found objects"],"movement":["contemporary sculpture"]},{"id":97,"name":"Tara Donovan","medium":"Sculpture","born":1969,"country":"United States","theme":["materiality","systems","nature","perception"],"aesthetic":["organic","abstract"],"process":["assemblage","installation"],"movement":["contemporary sculpture"]},{"id":98,"name":"Anselm Kiefer","medium":"Painting,Sculpture","born":1945,"country":"Germany","theme":["history","memory","mortality","spirituality"],"aesthetic":["monumental","layered"],"process":["painting","assemblage"],"movement":["neo expressionism"]},{"id":99,"name":"Gerhard Richter","medium":"Painting","born":1932,"country":"Germany","theme":["memory","representation","history","abstraction"],"aesthetic":["photoreal","abstract"],"process":["painting","photography"],"movement":["contemporary painting"]},{"id":100,"name":"Vija Celmins","medium":"Drawing,Painting","born":1938,"country":"Latvia","theme":["nature","time","perception","representation"],"aesthetic":["minimal","monochrome"],"process":["drawing","painting"],"movement":["contemporary art"]},{"id":101,"name":"William Kentridge","medium":"Drawing,Film","born":1955,"country":"South Africa","theme":["history","memory","power","identity"],"aesthetic":["monochrome","expressive"],"process":["charcoal","animation","film"],"movement":["contemporary art"]},{"id":102,"name":"Shirin Neshat","medium":"Photography,Film","born":1957,"country":"Iran","theme":["identity","gender","power","spirituality"],"aesthetic":["black and white","cinematic"],"process":["photography","film"],"movement":["contemporary art"]},{"id":103,"name":"Tania Bruguera","medium":"Performance","born":1968,"country":"Cuba","theme":["power","politics","participation","identity"],"aesthetic":["conceptual","participatory"],"process":["performance","social practice"],"movement":["social practice"]},{"id":104,"name":"Theaster Gates","medium":"Installation,Social Practice","born":1973,"country":"United States","theme":["community","place","history","materiality"],"aesthetic":["assemblage","architectural"],"process":["social practice","installation"],"movement":["social practice"]},{"id":105,"name":"Rick Lowe","medium":"Social Practice","born":1961,"country":"United States","theme":["community","place","participation","society"],"aesthetic":["participatory","site specific"],"process":["social practice","installation"],"movement":["social practice"]},{"id":106,"name":"Suzanne Lacy","medium":"Performance,Social Practice","born":1945,"country":"United States","theme":["gender","community","participation","power"],"aesthetic":["participatory","documentary"],"process":["performance","social practice"],"movement":["feminist art","social practice"]},{"id":107,"name":"Toyin Ojih Odutola","medium":"Drawing","born":1985,"country":"Nigeria","theme":["identity","history","representation","narrative"],"aesthetic":["figurative","layered"],"process":["drawing","portraiture"],"movement":["contemporary art"]},{"id":108,"name":"Njideka Akunyili Crosby","medium":"Painting,Collage","born":1983,"country":"Nigeria","theme":["identity","memory","place","history"],"aesthetic":["figurative","layered"],"process":["painting","photo transfer","collage"],"movement":["contemporary painting"]},{"id":109,"name":"Cecily Brown","medium":"Painting","born":1969,"country":"United Kingdom","theme":["body","representation","abstraction","desire"],"aesthetic":["expressive","abstract"],"process":["painting"],"movement":["contemporary painting"]},{"id":110,"name":"Mark Rothko","medium":"Painting","born":1903,"country":"Latvia","theme":["spirituality","perception","abstraction","emotion"],"aesthetic":["color","minimal"],"process":["painting"],"movement":["abstract expressionism"]},{"id":111,"name":"Jackson Pollock","medium":"Painting","born":1912,"country":"United States","theme":["abstraction","body","process","gesture"],"aesthetic":["expressive","abstract"],"process":["drip painting"],"movement":["abstract expressionism"]},{"id":112,"name":"Lee Krasner","medium":"Painting","born":1908,"country":"United States","theme":["abstraction","identity","gesture","process"],"aesthetic":["expressive","abstract"],"process":["painting","collage"],"movement":["abstract expressionism"]},{"id":113,"name":"Alma Thomas","medium":"Painting","born":1891,"country":"United States","theme":["nature","color","abstraction","perception"],"aesthetic":["color","patterned"],"process":["painting"],"movement":["color field painting"]},{"id":114,"name":"Bridget Riley","medium":"Painting","born":1931,"country":"United Kingdom","theme":["perception","systems","abstraction","color"],"aesthetic":["geometric","optical"],"process":["painting"],"movement":["op art"]},{"id":115,"name":"Victor Vasarely","medium":"Painting","born":1906,"country":"Hungary","theme":["perception","systems","abstraction","technology"],"aesthetic":["geometric","optical"],"process":["painting","design"],"movement":["op art"]},{"id":116,"name":"Donald Judd","medium":"Sculpture","born":1928,"country":"United States","theme":["materiality","space","systems","abstraction"],"aesthetic":["minimal","geometric"],"process":["fabrication","sculpture"],"movement":["minimalism"]},{"id":117,"name":"Agnes Martin","medium":"Painting","born":1912,"country":"Canada","theme":["perception","spirituality","abstraction","systems"],"aesthetic":["minimal","geometric"],"process":["painting","drawing"],"movement":["minimalism"]},{"id":118,"name":"Eva and Franco Mattes","medium":"Digital Art","born":1976,"country":"Italy","theme":["technology","identity","representation","authorship"],"aesthetic":["digital","conceptual"],"process":["internet art","performance"],"movement":["net art"]},{"id":119,"name":"JODI","medium":"Digital Art","born":1994,"country":"Netherlands","theme":["technology","systems","representation","authorship"],"aesthetic":["glitch","digital"],"process":["code","web art"],"movement":["net art"]},{"id":120,"name":"Laurie Anderson","medium":"Performance,Media Art","born":1947,"country":"United States","theme":["technology","identity","language","memory"],"aesthetic":["experimental","immersive"],"process":["performance","video","sound"],"movement":["performance art"]},{"id":121,"name":"Janet Cardiff","medium":"Installation,Sound Art","born":1957,"country":"Canada","theme":["memory","place","perception","time"],"aesthetic":["immersive","cinematic"],"process":["sound walk","installation"],"movement":["sound art"]},{"id":122,"name":"Christine Sun Kim","medium":"Sound Art,Drawing","born":1980,"country":"United States","theme":["language","identity","perception","power"],"aesthetic":["graphic","conceptual"],"process":["drawing","performance","sound"],"movement":["sound art"]},{"id":123,"name":"Trevor Paglen","medium":"Photography,Media Art","born":1974,"country":"United States","theme":["technology","surveillance","power","representation"],"aesthetic":["conceptual","digital"],"process":["photography","machine learning"],"movement":["contemporary art"]},{"id":124,"name":"Harun Farocki","medium":"Film,Video Art","born":1944,"country":"Germany","theme":["technology","power","representation","history"],"aesthetic":["essayistic","documentary"],"process":["film","video","essay"],"movement":["essay film"]},{"id":125,"name":"Hélio Oiticica","medium":"Installation,Performance","born":1937,"country":"Brazil","theme":["body","participation","color","space"],"aesthetic":["immersive","color"],"process":["installation","performance"],"movement":["neoconcretism"]},{"id":126,"name":"Lygia Clark","medium":"Sculpture,Performance","born":1920,"country":"Brazil","theme":["body","participation","perception","identity"],"aesthetic":["geometric","participatory"],"process":["sculpture","relational objects"],"movement":["neoconcretism"]},{"id":127,"name":"Lygia Pape","medium":"Film,Installation","born":1927,"country":"Brazil","theme":["body","participation","perception","space"],"aesthetic":["geometric","experimental"],"process":["film","installation"],"movement":["neoconcretism"]},{"id":128,"name":"Cildo Meireles","medium":"Installation","born":1948,"country":"Brazil","theme":["power","politics","perception","space"],"aesthetic":["conceptual","immersive"],"process":["installation","intervention"],"movement":["conceptual art"]},{"id":129,"name":"Dawoud Bey","medium":"Photography","born":1953,"country":"United States","theme":["identity","history","community","place"],"aesthetic":["direct","color"],"process":["portraiture","documentary"],"movement":["contemporary photography"]},{"id":130,"name":"LaToya Ruby Frazier","medium":"Photography","born":1982,"country":"United States","theme":["community","ecology","history","place"],"aesthetic":["black and white","documentary"],"process":["photography","video"],"movement":["social documentary"]},{"id":131,"name":"Edward Burtynsky","medium":"Photography","born":1955,"country":"Canada","theme":["ecology","modernity","landscape","capitalism"],"aesthetic":["monumental","color"],"process":["large format","documentary"],"movement":["contemporary photography"]},{"id":132,"name":"Richard Misrach","medium":"Photography","born":1949,"country":"United States","theme":["landscape","ecology","place","modernity"],"aesthetic":["color","monumental"],"process":["large format","photography"],"movement":["new topographics"]},{"id":133,"name":"Maya Deren","medium":"Film","born":1917,"country":"Ukraine","theme":["dreams","body","ritual","identity"],"aesthetic":["surreal","experimental"],"process":["film","editing"],"movement":["experimental film"]},{"id":134,"name":"Stan Brakhage","medium":"Film","born":1933,"country":"United States","theme":["perception","body","abstraction","time"],"aesthetic":["experimental","abstract"],"process":["film","hand painting"],"movement":["experimental film"]},{"id":135,"name":"Chantal Akerman","medium":"Film,Installation","born":1950,"country":"Belgium","theme":["time","gender","identity","everyday life"],"aesthetic":["minimal","durational"],"process":["film","installation"],"movement":["experimental film"]},{"id":136,"name":"Agnès Varda","medium":"Film,Photography","born":1928,"country":"Belgium","theme":["memory","place","identity","society"],"aesthetic":["lyrical","documentary"],"process":["film","photography"],"movement":["french new wave"]},{"id":137,"name":"Chris Marker","medium":"Film,Photography","born":1921,"country":"France","theme":["memory","time","history","technology"],"aesthetic":["essayistic","cinematic"],"process":["film","photo essay"],"movement":["essay film"]},{"id":138,"name":"John Akomfrah","medium":"Film,Installation","born":1957,"country":"Ghana","theme":["memory","history","identity","ecology"],"aesthetic":["cinematic","immersive"],"process":["film","multichannel video"],"movement":["contemporary art"]},{"name":"Titus Kaphar","medium":"Painting,Sculpture","born":1976,"country":"United States","theme":["identity","race","representation","history","power","memory"],"aesthetic":["figurative","conceptual"],"process":["painting","portraiture","sculpture"],"movement":["contemporary painting"],"provenance":{"classification":"Art Atlas editorial — review recommended","biography":"https://www.tituskaphar.com/"},"id":139}]</script><script>
+(()=>{'use strict';let artistLens='all';function setArtistLens(value){artistLens=value;document.getElementById('lens').value=value}document.getElementById('lens').addEventListener('change',e=>{setArtistLens(e.target.value);recompute()});const artists=JSON.parse(document.getElementById('artist-data').textContent),byId=new Map(artists.map(a=>[a.id,a])),cats=['theme','aesthetic','process','movement'];let printMode=false,lockedAxis="none",lockAngle=0;const activeTags=new Map();let selected=0,shown=[],edges=[],positions=new Map(),hitPoints=[],yaw=0,pitch=0,zoom=1,panX=0,panY=0,drag=null,hover=null,W=600,H=600,dpr=1;const $=id=>document.getElementById(id),canvas=$('scene'),ctx=canvas.getContext('2d');const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));function matchesTags(a,b){if(!activeTags.size)return false;for(const [cat,tags] of activeTags){for(const tag of tags){if((a[cat]||[]).includes(tag)&&(b[cat]||[]).includes(tag))return true}}return false}function similarity(a,b){if(!matchesTags(a,b))return{score:0,shared:[]};let lens=artistLens,keys=lens==='all'?cats:[lens],sum=0,max=0,shared=[];for(const k of keys){const x=new Set(a[k]||[]),y=new Set(b[k]||[]),inter=[...x].filter(t=>y.has(t));shared.push(...inter);const weight=k==='theme'?3:2;sum+=weight*inter.length;max+=weight*Math.max(x.size,y.size,1)}return{score:max?sum/max:0,shared:[...new Set(shared)]}}function hash(s){let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return(h>>>0)/4294967295}function coord(a,axis){if(axis==='time')return (a.born-1900)/125*190;const vals=a[axis]||[];if(!vals.length)return 0;let sum=0;for(const t of vals)sum+=(hash(axis+':'+t)*2-1);return clamp(sum/Math.sqrt(vals.length),-1,1)*210}function inTimeRange(a){if(a.id===selected)return true;const year=byId.get(selected).born;return a.born>=year-+$('yearsBefore').value&&a.born<=year+ +$('yearsAfter').value}function updateTimeLabel(){const year=byId.get(selected).born,before=+$('yearsBefore').value,after=+$('yearsAfter').value;$('yearsBeforeVal').textContent=before;$('yearsAfterVal').textContent=after;$('timeRangeLabel').textContent=`${year-before}–${year+after} · centered on ${year}`;document.querySelectorAll('.time-presets button').forEach(b=>{const active=before===+b.dataset.years&&after===+b.dataset.years;b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active))})}function recompute(){updateTimeLabel();let root=byId.get(selected),minimum=+$('minimum').value/100,limit=+$('count').value,depth=+$('depth').value,visited=new Map([[selected,0]]),queue=[selected];const neighborCache=new Map();function neighbors(id){if(!neighborCache.has(id)){let a=byId.get(id);neighborCache.set(id,artists.filter(b=>b.id!==id && inTimeRange(b) && matchesTags(root,b)).map(b=>({id:b.id,...similarity(a,b)})).filter(e=>e.score>=minimum).sort((a,b)=>b.score-a.score).slice(0,18))}return neighborCache.get(id)}for(let hop=1;activeTags.size&&hop<=depth&&visited.size<limit;hop++){let options=[];for(const id of queue)options.push(...neighbors(id));options.sort((a,b)=>b.score-a.score);let next=[];for(const e of options){if(visited.size>=limit)break;if(!visited.has(e.id)){visited.set(e.id,hop);next.push(e.id)}}queue=next;if(!queue.length)break}shown=[...visited.keys()].map(id=>byId.get(id));edges=[];for(let i=0;i<shown.length;i++)for(let j=i+1;j<shown.length;j++){let s=similarity(shown[i],shown[j]);if(activeTags.size&&s.score>=minimum)edges.push({a:shown[i].id,b:shown[j].id,...s})}const ax=[$('axisX').value,$('axisY').value,$('axisZ').value];positions=new Map(shown.map(a=>[a.id,{x:coord(a,ax[0]),y:coord(a,ax[1]),z:coord(a,ax[2])}]));const focus={...positions.get(selected)};for(const p of positions.values()){p.x-=focus.x;p.y-=focus.y;p.z-=focus.z}const s=edges.length; $('status').textContent=shown.length+' artists · '+s+' relationships'+(activeTags.size?' · '+[...activeTags.values()].reduce((n,v)=>n+v.size,0)+' attributes enabled':' · no attributes enabled');$('depthVal').textContent=depth;$('countVal').textContent=limit;$('minVal').textContent=$('minimum').value+'%';detail();$('axisLegend').textContent='X: '+$('axisX').selectedOptions[0].text+' · Y: '+$('axisY').selectedOptions[0].text+' · Z: '+$('axisZ').selectedOptions[0].text;draw()}
+let motionEnabled=!window.matchMedia('(prefers-reduced-motion: reduce)').matches,motionClock=0,motionSurgeStart=-1,lastMotionFrame=0;
+function triggerMotionSurge(){if(motionEnabled)motionSurgeStart=performance.now()}
+function motionAmplitude(){if(motionSurgeStart<0)return 1;const elapsed=(performance.now()-motionSurgeStart)/1000;if(elapsed>=4.8){motionSurgeStart=-1;return 1}return 1+9.0*Math.pow(1-elapsed/4.8,2)}
+function floatPosition(a){const p=positions.get(a.id);if(!motionEnabled||a.id===selected)return p;const n=Number(a.id)||0,amp=motionAmplitude(),t=motionClock;
+const dx=amp*(4*Math.sin(t*.39+n*2.17)+2*Math.cos(t*.23+n*.83));
+const dy=amp*(5*Math.sin(t*.43+n*1.79)+2*Math.cos(t*.29+n*1.31));
+const dz=amp*(5*Math.cos(t*.37+n*1.53)+2*Math.sin(t*.19+n*2.03));
+// Never move a locked coordinate: birth-year ordering stays exact.
+return{x:p.x+(lockedAxis==='X'?0:dx),y:p.y+(lockedAxis==='Y'?0:dy),z:p.z+(lockedAxis==='Z'?0:dz)};
+}
+function project(p){let x,y,z;if(lockedAxis==='X'){x=p.x;y=p.y*Math.cos(lockAngle)-p.z*Math.sin(lockAngle);z=p.y*Math.sin(lockAngle)+p.z*Math.cos(lockAngle)}else if(lockedAxis==='Y'){x=p.y;y=p.z*Math.cos(lockAngle)-p.x*Math.sin(lockAngle);z=p.z*Math.sin(lockAngle)+p.x*Math.cos(lockAngle)}else if(lockedAxis==='Z'){x=p.z;y=p.x*Math.cos(lockAngle)-p.y*Math.sin(lockAngle);z=p.x*Math.sin(lockAngle)+p.y*Math.cos(lockAngle)}else{let cy=Math.cos(yaw),sy=Math.sin(yaw),cp=Math.cos(pitch),sp=Math.sin(pitch);x=p.x*cy-p.z*sy;z=p.x*sy+p.z*cy;y=p.y*cp-z*sp;z=p.y*sp+z*cp}let perspective=650/(650+z*.6),baseScale=Math.min(W,H)/660*zoom,scale=baseScale*perspective;return{x:W/2+panX+x*(lockedAxis==='none'?scale:baseScale),y:H/2+panY-y*scale,z,scale}}
+function updateLock(){lockedAxis=$('horizontalLock').value;lockAngle=0;panX=panY=0;draw()}
+function draw(){ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,W,H);if(printMode){ctx.fillStyle='#ffffff';ctx.fillRect(0,0,W,H)}const origin=project({x:0,y:0,z:0});if($('axisX').value==='time'){ctx.save();ctx.font='bold 12px system-ui';ctx.textAlign='left';ctx.fillStyle=printMode?'#a33b20':'#f2a989';ctx.fillText(lockedAxis==='X'?'TIME LOCKED HORIZONTAL: EARLIER  ←  →  LATER':'TIME: EARLIER (−X)  →  LATER (+X)',16,H-18);ctx.restore()}for(const [axis,color,v,metric] of [['X','#d04a26',{x:280,y:0,z:0},$('axisX').selectedOptions[0].text],['Y','#1468a2',{x:0,y:280,z:0},$('axisY').selectedOptions[0].text],['Z','#8b36a6',{x:0,y:0,z:280},$('axisZ').selectedOptions[0].text]]){let a=project(v),b=project({x:-v.x*.65,y:-v.y*.65,z:-v.z*.65});ctx.beginPath();ctx.moveTo(b.x,b.y);ctx.lineTo(a.x,a.y);ctx.strokeStyle=color;ctx.lineWidth=printMode?3:2.4;ctx.stroke();let angle=Math.atan2(a.y-origin.y,a.x-origin.x);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(a.x-11*Math.cos(angle-.45),a.y-11*Math.sin(angle-.45));ctx.lineTo(a.x-11*Math.cos(angle+.45),a.y-11*Math.sin(angle+.45));ctx.closePath();ctx.fillStyle=color;ctx.fill();ctx.font='bold 14px system-ui';ctx.textAlign='left';let tx=clamp(a.x+12,8,W-200),ty=clamp(a.y-12,24,H-10);ctx.fillText(axis+' — '+metric,tx,ty)}if($('axisX').value==='time'&&lockedAxis==='none'&&Math.cos(yaw)<0){ctx.save();ctx.font='bold 12px system-ui';ctx.fillStyle=printMode?'#a33b20':'#ffcc8b';ctx.textAlign='right';ctx.fillText('ROTATED VIEW — screen direction reversed',W-15,24);ctx.restore()}if($('axisX').value==='time'){for(let yr=1800;yr<=2025;yr+=25){let originYear=byId.get(selected).born;let pt=project({x:(yr-originYear)/125*190,y:0,z:0});ctx.beginPath();ctx.moveTo(pt.x,pt.y-5);ctx.lineTo(pt.x,pt.y+5);ctx.strokeStyle='#d04a26';ctx.lineWidth=1.5;ctx.stroke();ctx.font='11px system-ui';ctx.textAlign='center';ctx.fillStyle=printMode?'#8d3219':'#f0b8a2';ctx.fillText(String(yr),pt.x,pt.y+19)}}const projected=new Map(shown.map(a=>[a.id,project(floatPosition(a))]));if($('edges').checked)for(const e of edges){let a=projected.get(e.a),b=projected.get(e.b),active=e.a===selected||e.b===selected;ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.strokeStyle=active?(printMode?'rgba(160,80,30,.8)':'rgba(226,173,119,.65)'):(printMode?'rgba(70,80,90,.32)':'rgba(151,177,195,.16)');ctx.lineWidth=active?1.8:0.8;ctx.stroke()}hitPoints=[];const ordered=[...shown].sort((a,b)=>projected.get(b.id).z-projected.get(a.id).z);for(const a of ordered){const p=projected.get(a.id),active=a.id===selected,r=active?8:5;hitPoints.push({id:a.id,x:p.x,y:p.y});ctx.beginPath();ctx.arc(p.x,p.y,r,0,Math.PI*2);ctx.fillStyle=active?(printMode?'#ad451e':'#e2ad77'):a.medium.toLowerCase().includes('photography')?'#8fbbcf':'#bca2d4';ctx.fill();if(active||a.id===hover||p.scale>.65){ctx.textAlign='center';ctx.font=(active?'bold 15':'11')+'px system-ui';ctx.lineWidth=3;ctx.strokeStyle=printMode?'#ffffff':'#121922';ctx.strokeText(a.name,p.x,p.y-13);ctx.fillStyle=printMode?'#1b2730':(active?'#ffe3c0':'#e5e9ed');ctx.fillText(a.name+($('axisX').value==='time'?' ('+a.born+')':''),p.x,p.y-13)}}}
+window.atlasResearchLinks=function atlasResearchLinks(parent,name,kind){const q=encodeURIComponent(name+(kind==='movement'?' art movement':' artist'));const w=encodeURIComponent(name+(kind==='movement'?' art movement':''));const wrap=document.createElement('div');wrap.className='atlas-research-links';for(const [label,url] of [['Web search','https://www.google.com/search?q='+q],['Images','https://www.google.com/search?tbm=isch&q='+q],['Wikipedia','https://en.wikipedia.org/w/index.php?search='+w]]){const a=document.createElement('a');a.href=url;a.target='_blank';a.rel='noopener noreferrer';a.textContent=label+' ↗';wrap.appendChild(a)}parent.appendChild(wrap)};function detail(){
+ const a=byId.get(selected), root=$('detail');root.replaceChildren();
+ const add=(tag,txt,cls,parent=root)=>{const el=document.createElement(tag);el.textContent=txt;if(cls)el.className=cls;parent.appendChild(el);return el};
+ add('h3',a.name,'profile-name');
+ const meta=add('div','', 'profile-meta');meta.append(document.createTextNode(a.medium),document.createElement('br'),document.createTextNode('Born '+a.born+' · '+a.country));atlasResearchLinks(root,a.name,'artist');
+ add('p','Choose attributes to add related artists. Each enabled attribute adds matches (OR logic); the time range and similarity controls still apply.','muted');
+ const actions=add('div','','attribute-actions');
+ const clear=add('button','Clear filters','smallbtn',actions);clear.type='button';clear.onclick=()=>{activeTags.clear();recompute()};
+ const all=add('button','Show all related','smallbtn',actions);all.type='button';all.onclick=()=>{activeTags.clear();for(const c of cats)activeTags.set(c,new Set(a[c]||[]));setArtistLens('all');recompute()};
+ const titles={theme:'Themes',aesthetic:'Aesthetics',process:'Processes',movement:'Movements'};
+ for(const c of cats){const section=add('div','','section');add('h2',titles[c],null,section);for(const t of (a[c]||[])){
+  const active=!!activeTags.get(c)?.has(t),btn=add('button',t,'attribute-toggle'+(active?' active':''),section);btn.type='button';btn.setAttribute('aria-pressed',String(active));
+  btn.onclick=()=>{const set=activeTags.get(c)||new Set();if(set.has(t))set.delete(t);else set.add(t);if(set.size)activeTags.set(c,set);else activeTags.delete(c);recompute()};
+ }}
+ const enabled=[...activeTags.values()].reduce((n,set)=>n+set.size,0);
+ add('p',enabled?enabled+' attributes enabled · '+(shown.length-1)+' related artists visible':'No attributes enabled · showing only '+a.name,'attribute-status');
+ const related=add('div','','section');add('h2','Related artists in map',null,related);
+ const list=shown.filter(b=>b.id!==selected).map(b=>({a:b,s:similarity(a,b)})).sort((x,y)=>y.s.score-x.s.score).slice(0,8);
+ if(!list.length)add('p','Enable an attribute to discover connections.','muted',related);
+ for(const entry of list){const item=add('div','','connection',related);item.tabIndex=0;item.setAttribute('role','button');
+  add('strong',entry.a.name,null,item);add('span',' '+Math.round(entry.s.score*100)+'%','muted',item);
+  add('p',entry.s.shared.slice(0,6).join(' · ')||'Shared classifications',null,item);
+  item.onclick=()=>select(entry.a.id);item.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();select(entry.a.id)}};
+ }
+ const foot=add('div','','section');add('p','Similarity is an exploratory score based on shared editorial tags, not a scholarly assertion of influence. Birth years and classifications are starter metadata and should be independently verified before publication.','muted',foot);
+ const research=add('a','Research in Wikidata ↗',null,foot);research.href='https://www.wikidata.org/w/index.php?search='+encodeURIComponent(a.name);research.target='_blank';research.rel='noopener noreferrer';
+}
+function select(id){if(id===selected)return;const previous=byId.get(selected);const allEnabled=cats.every(c=>(previous[c]||[]).every(tag=>activeTags.get(c)?.has(tag)));const noneEnabled=activeTags.size===0;const oldTags=new Map([...activeTags].map(([c,tags])=>[c,new Set(tags)]));triggerMotionSurge();selected=id;activeTags.clear();if(allEnabled){for(const c of cats)activeTags.set(c,new Set(byId.get(id)[c]||[]))}else if(!noneEnabled){for(const c of cats){const retained=(byId.get(id)[c]||[]).filter(tag=>oldTags.get(c)?.has(tag));if(retained.length)activeTags.set(c,new Set(retained))}}recompute()}window.atlasSelectArtist=id=>select(id);window.atlasCurrentArtist=()=>byId.get(selected);function resize(){const r=$('stage').getBoundingClientRect();W=r.width;H=r.height;dpr=Math.min(2,window.devicePixelRatio||1);canvas.width=Math.round(W*dpr);canvas.height=Math.round(H*dpr);draw()}function pointer(e){let r=canvas.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top}}function hit(p){let best=null,d=22;for(const a of hitPoints){let v=Math.hypot(a.x-p.x,a.y-p.y);if(v<d){d=v;best=a.id}}return best}canvas.addEventListener('pointerdown',e=>{let p=pointer(e);drag={...p,yaw,pitch,panX,panY,lockAngle,move:false,pan:e.shiftKey||e.button===2};canvas.setPointerCapture(e.pointerId)});canvas.addEventListener('contextmenu',e=>e.preventDefault());canvas.addEventListener('pointermove',e=>{let p=pointer(e);if(drag){let dx=p.x-drag.x,dy=p.y-drag.y;if(Math.hypot(dx,dy)>4)drag.move=true;if(drag.pan){panX=drag.panX+dx;panY=drag.panY+dy}else if(lockedAxis!=='none'){panX=drag.panX+dx;lockAngle=drag.lockAngle+dy*.008}else{yaw=drag.yaw+dx*.008;pitch=clamp(drag.pitch+dy*.008,-Math.PI/2,Math.PI/2)}draw()}else{hover=hit(p);canvas.style.cursor=hover===null?'grab':'pointer';draw()}});canvas.addEventListener('pointerup',e=>{if(drag&&!drag.move){let id=hit(pointer(e));if(id!==null)select(id)}drag=null});canvas.addEventListener('wheel',e=>{e.preventDefault();zoom=clamp(zoom*(e.deltaY>0?.9:1.1),.25,5);draw()},{passive:false});for(const a of artists){let o=document.createElement('option');o.value=a.name;$('names').appendChild(o)}$('search').addEventListener('change',()=>{let a=artists.find(a=>a.name.toLowerCase()===$('search').value.trim().toLowerCase());if(a)select(a.id)});for(const id of ['axisX','axisY','axisZ','depth','count','minimum'])$(id).addEventListener('input',recompute);for(const id of ['yearsBefore','yearsAfter'])$(id).addEventListener('input',recompute);document.querySelectorAll('.time-presets button').forEach(b=>b.addEventListener('click',()=>{$('yearsBefore').value=b.dataset.years;$('yearsAfter').value=b.dataset.years;recompute()}));$('edges').addEventListener('change',draw);$('horizontalLock').addEventListener('change',updateLock);$('reset').onclick=()=>{yaw=0;pitch=0;lockAngle=0;zoom=1;panX=panY=0;$('horizontalLock').value='none';lockedAxis='none';draw()};$('recenter').onclick=()=>select(0);function fitArtist3D(){
+   panX=panY=0;zoom=1;draw();
+   if(!hitPoints.length)return;
+   let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;
+   for(const p of hitPoints){minX=Math.min(minX,p.x);maxX=Math.max(maxX,p.x);minY=Math.min(minY,p.y);maxY=Math.max(maxY,p.y)}
+   let spanX=Math.max(1,maxX-minX),spanY=Math.max(1,maxY-minY);
+   panX=W/2-(minX+maxX)/2;panY=H/2-(minY+maxY)/2;
+   zoom=Math.max(.25,Math.min(5,Math.min((W-120)/spanX,(H-120)/spanY)));
+   // Recalculate centering after scaling (projection uses zoom).
+   panX=panY=0;draw();
+   minX=Infinity;maxX=-Infinity;minY=Infinity;maxY=-Infinity;
+   for(const p of hitPoints){minX=Math.min(minX,p.x);maxX=Math.max(maxX,p.x);minY=Math.min(minY,p.y);maxY=Math.max(maxY,p.y)}
+   panX=W/2-(minX+maxX)/2;panY=H/2-(minY+maxY)/2;draw();
+  }
+  $('zoom-in').onclick=()=>{zoom=Math.min(5,zoom*1.2);draw()};
+  $('zoom-out').onclick=()=>{zoom=Math.max(.25,zoom/1.2);draw()};
+  $('fit').onclick=fitArtist3D;
+  $('fit-selected').onclick=()=>{panX=panY=0;draw();const p=hitPoints.find(p=>p.id===selected);if(p){panX=W/2-p.x;panY=H/2-p.y;draw()}};
+  window.addEventListener('resize',resize);function animateMotion(t){requestAnimationFrame(animateMotion);if(!motionEnabled||document.hidden||t-lastMotionFrame<40)return;lastMotionFrame=t;motionClock=t/1000;draw()}requestAnimationFrame(animateMotion);$('horizontalLock').value='none';lockedAxis='none';for(const c of cats)activeTags.set(c,new Set(byId.get(selected)[c]||[]));resize();recompute();
+// Carry active exploration settings between standalone 2D and 3D views.
+const switchView=document.getElementById('switch-view');
+if(switchView)switchView.addEventListener('click',()=>{try{const state={artist:byId.get(selected).name,before:+$('yearsBefore').value,after:+$('yearsAfter').value,tags:Object.fromEntries([...activeTags].map(([c,v])=>[c,[...v]]))};switchView.href=(switchView.getAttribute('href').split('#')[0])+'#atlas='+encodeURIComponent(JSON.stringify(state))}catch(e){}});
+try{if(location.hash.startsWith('#atlas=')){const state=JSON.parse(decodeURIComponent(location.hash.slice(7)));const match=artists.find(a=>a.name===state.artist);if(match){selected=match.id;$('yearsBefore').value=state.before??75;$('yearsAfter').value=state.after??75;activeTags.clear();for(const c of cats){const valid=(state.tags?.[c]||[]).filter(tag=>(match[c]||[]).includes(tag));if(valid.length)activeTags.set(c,new Set(valid))}recompute()}}}catch(e){}
+})();
+</script><script>
+(function(){
+'use strict';
+const $=id=>document.getElementById(id);
+const artists=JSON.parse($('artist-data').textContent);
+const is3D=document.body.dataset.atlasDimension==='3d';
+const tidy=s=>String(s||'').toLowerCase().trim();
+const title=s=>s.split(' ').map(w=>w==='dada'?'Dada':w.charAt(0).toUpperCase()+w.slice(1)).join(' ');
+// Explicit dates describe the approximate emergence of a movement, not every artist's career.
+const known={
+'fauvism':[1905,1908],'expressionism':[1905,1930],'post-impressionism':[1886,1905],'neo-impressionism':[1886,1910],
+'orphism':[1912,1914],'cubism':[1907,1925],'die brücke':[1905,1913],'der blaue reiter':[1911,1914],
+'bauhaus':[1919,1933],'dada':[1916,1924],'surrealism':[1924,1970],'constructivism':[1915,1940],
+'abstract expressionism':[1943,1965],'fluxus':[1960,1980],'minimalism':[1960,1980],
+'land art':[1965,1990],'feminist art':[1968,1995],'conceptual art':[1960,1985],
+'social practice':[1990,2026],'new topographics':[1975,1990],'pictures generation':[1974,1990],
+'black arts movement':[1965,1975],'de stijl':[1917,1931],'suprematism':[1915,1930],
+'neoconcretism':[1959,1965],'op art':[1960,1975],'color field painting':[1948,1975],
+'light and space':[1960,1985],'net art':[1990,2010],'generative art':[1960,2026],
+'contemporary photography':[1970,2026],'contemporary art':[1970,2026],
+'performance art':[1960,2026],'social documentary':[1930,2026],
+'new media art':[1980,2026],'video art':[1965,2026],
+'american modernism':[1910,1950],'mexican modernism':[1920,1960],
+'dusseldorf school':[1970,2000],'new objectivity':[1920,1935]
+};
+const descriptions={
+'fauvism':'Expressive, non-naturalistic color and simplified form.','dada':'Anti-establishment experimentation with chance, collage, performance, and readymades.',
+'surrealism':'Dreams, automatism, unexpected juxtapositions, and the unconscious.',
+'bauhaus':'Art, craft, architecture, and design brought into a common educational program.',
+'abstract expressionism':'Postwar abstraction emphasizing gesture, scale, and painterly action.',
+'fluxus':'Experimental scores, performance, objects, and everyday actions.',
+'land art':'Artistic interventions in and responses to landscape and environment.',
+'conceptual art':'Ideas, systems, language, and instructions take priority over conventional objects.',
+'social practice':'Participatory and community-engaged artistic methods.'
+};
+const historical=[
+['fauvism','post-impressionism','Expressive color precedents'],['fauvism','neo-impressionism','Color theory precedents'],['fauvism','expressionism','Parallel expressive-color experiments'],['fauvism','die brücke','Related expressive color and simplified form'],['fauvism','cubism','Shared early modernist context'],['fauvism','orphism','Color-based modernist experimentation'],
+['expressionism','die brücke','Die Brücke is associated with Expressionism'],['expressionism','der blaue reiter','Der Blaue Reiter is associated with Expressionism'],
+['post-impressionism','cubism','Cézanne as an important precedent'],['post-impressionism','neo-impressionism','Overlapping late nineteenth-century painting'],
+['cubism','orphism','Orphism developed in dialogue with Cubism'],['dada','surrealism','Shared participants and historical development'],['dada','fluxus','Experimental anti-art precedents'],
+['bauhaus','constructivism','Modernist design exchange'],['surrealism','abstract expressionism','Automatism as one influence']
+];
+// Directional, curator-reviewed starting examples: source -> influenced movement.
+ // These are limited illustrative art-historical relationships, not an exhaustive database.
+ const influences=[
+ ['post-impressionism','fauvism','Post-Impressionist color and expressive painting informed Fauvism'],
+ ['post-impressionism','cubism','Cézanne’s structural approach was foundational to Cubism'],
+ ['neo-impressionism','fauvism','Divisionist color practice informed early Fauvist experiments'],
+ ['cubism','orphism','Orphism developed from and alongside Cubist experiments'],
+ ['dada','surrealism','Dada artists and methods contributed to Surrealism'],
+ ['dada','fluxus','Dada anti-art practices were a precedent for Fluxus'],
+ ['surrealism','abstract expressionism','Surrealist automatism informed Abstract Expressionist methods']
+ ];
+ const influence=(a,b)=>influences.find(e=>e[0]===a&&e[1]===b);
+ const influenceEither=(a,b)=>influence(a,b)||influence(b,a);
+ const seed=['fauvism','expressionism','post-impressionism','neo-impressionism','die brücke','der blaue reiter','orphism','cubism','dada','surrealism','bauhaus','constructivism','abstract expressionism','fluxus'];
+const all=[...new Set([...seed,...historical.flatMap(x=>x.slice(0,2)),...artists.flatMap(a=>a.movement||[])].map(tidy))].sort();
+const members=new Map(all.map(n=>[n,artists.filter(a=>(a.movement||[]).some(m=>tidy(m)===n))]));
+const years=new Map(all.map(n=>{let knownYears=known[n];if(knownYears)return[n,{start:knownYears[0],end:knownYears[1],source:'Approximate movement dates'}];const born=(members.get(n)||[]).map(a=>+a.born).filter(Number.isFinite).sort((a,b)=>a-b);let proxy=born.length?Math.round(born[Math.floor(born.length/2)]+30):1950;return[n,{start:proxy,end:proxy,source:'Estimated from associated artists; not a documented movement date'}]}));
+const curated={
+'fauvism':{subject:['landscape','portrait','still life'],aesthetic:['representational','expressive','color-focused']},
+'cubism':{subject:['still life','portrait'],aesthetic:['abstract','representational','geometric']},
+'dada':{subject:['political protest'],aesthetic:['experimental','collage'],approach:['political critique','anti-establishment']},
+'constructivism':{subject:['political protest'],aesthetic:['abstract','geometric'],approach:['political critique','social transformation']},
+'surrealism':{aesthetic:['representational','experimental'],approach:['dreams and unconscious']},
+'abstract expressionism':{aesthetic:['abstract','gestural']},
+'minimalism':{aesthetic:['abstract','geometric','minimal']},
+'land art':{subject:['landscape','environment'],approach:['site-specific','ecology']},
+'environmental art':{subject:['landscape','environment'],approach:['ecology','site-specific']},
+'new topographics':{subject:['landscape','built environment'],aesthetic:['representational']},
+'social practice':{subject:['community','political protest'],approach:['participation','relational aesthetics','social engagement']},
+'feminist art':{subject:['body','identity','political protest'],approach:['political critique','social engagement']},
+'black arts movement':{subject:['identity','political protest'],approach:['political critique','social engagement']},
+'fluxus':{approach:['participation','performance','social engagement']},
+'conceptual art':{aesthetic:['experimental'],approach:['language and ideas','systems']},
+'bauhaus':{aesthetic:['geometric','abstract'],approach:['design','social transformation']},
+'orphism':{aesthetic:['abstract','color-focused']},
+'expressionism':{aesthetic:['expressive','representational']},
+'neo-impressionism':{subject:['landscape'],aesthetic:['representational','color-focused']},
+'post-impressionism':{subject:['landscape','still life','portrait'],aesthetic:['representational','color-focused']},
+'performance art':{approach:['performance','participation']}
+};
+const cats=['subject','aesthetic','approach','process'];
+function attributes(n){const out={subject:new Set(),aesthetic:new Set(),approach:new Set(),process:new Set()};const c=curated[n]||{};for(const k of cats)for(const v of c[k]||[])out[k].add(v);
+ for(const a of members.get(n)||[]){for(const v of a.theme||[]){const t=tidy(v);if(['landscape','still life','portrait','body','identity','environment','memory','family','nature','architecture','politics','community'].includes(t))out.subject.add(t);if(t.includes('politic')||t.includes('protest'))out.subject.add('political protest');}
+ for(const v of a.aesthetic||[]){const t=tidy(v);if(['abstract','abstraction','geometric','minimal','representational','lyrical','conceptual','expressive','gestural','documentary','black and white','color','surreal','cinematic'].includes(t))out.aesthetic.add(t==='abstraction'?'abstract':t);}
+ for(const v of a.process||[])out.process.add(tidy(v));}
+ return out}
+const attrs=new Map(all.map(n=>[n,attributes(n)]));
+let selected='fauvism',lens='all',depth=2,limit=20,shown=[],links=[],positions=new Map(),hover=null,drag=null,view={x:0,y:0,k:1},yaw=-.3,pitch=.32;
+let before=100,after=100,active=new Map(),filterMode='all';
+ let mvMotionEnabled=!window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+ let mvMotionStart=-10000,mvMotionClock=0;
+ const mvPhase=n=>{let h=0;for(const c of n)h=(h*31+c.charCodeAt(0))>>>0;return h/4294967296*Math.PI*2};
+ function mvPosition(n){
+   const p=positions.get(n);if(!p)return{x:0,y:0,z:0};
+   if(n===selected||!mvMotionEnabled)return p;
+   const age=Math.max(0,(performance.now()-mvMotionStart)/1000);
+   const surge=age<5?65*Math.pow(1-age/5,2):0;
+   const phase=mvPhase(n),t=mvMotionClock;
+   return{x:p.x+(4+surge)*Math.sin(t*.64+phase),
+          y:p.y+(3+surge*.75)*Math.cos(t*.53+phase*1.7),
+          z:p.z+(is3D?(3+surge*.35)*Math.sin(t*.41+phase*.8):0)};
+ }
+ function mvSurge(){mvMotionStart=performance.now();}
+ 
+const canvas=$('movement-canvas'),stage=$('mv-stage'),ctx=canvas.getContext('2d');let W=800,H=550,dpr=1;
+const hist=(a,b)=>historical.find(e=>(e[0]===a&&e[1]===b)||(e[1]===a&&e[0]===b));
+function shared(a,b){const A=attrs.get(a),B=attrs.get(b),parts={};for(const c of cats)parts[c]=[...A[c]].filter(x=>B[c].has(x));return parts}
+function similarity(a,b){const h=hist(a,b),parts=shared(a,b);let score=(h?.48:0)+parts.subject.length*.11+parts.aesthetic.length*.12+parts.approach.length*.13+parts.process.length*.08;
+const co=(members.get(a)||[]).filter(x=>(x.movement||[]).some(m=>tidy(m)===b)).length;score+=Math.min(.25,co*.12);
+if(lens==='influence')score=influenceEither(a,b)?1:0;else if(lens==='history')score=h?1:0;else if(lens!=='all')score=parts[lens].length*.22+(h?.08:0);
+return{score:Math.min(1,score),h,parts}}
+function enabledTags(n){const A=attrs.get(n);if(filterMode==='all')return A;if(filterMode==='none')return Object.fromEntries(cats.map(c=>[c,new Set()]));return Object.fromEntries(cats.map(c=>[c,new Set([...(active.get(c)||[])].filter(t=>A[c].has(t)))]))}
+function allowedPair(a,b){if((lens==='influence'||filterMode==='all')&&influenceEither(selected,b))return true;if(filterMode==='all'&&hist(selected,b))return true;const en=enabledTags(selected);const B=attrs.get(b);return cats.some(c=>[...en[c]].some(t=>B[c].has(t)))}
+function inTime(n){if(n===selected)return true;const anchor=years.get(selected).start;const yr=years.get(n).start;return yr>=anchor-before&&yr<=anchor+after}
+function recompute(){
+ const minMovementStrength=+$('mv-strength').value/100;
+ $('mv-strength-label').textContent=$('mv-strength').value+'%';
+ const pool=all.filter(n=>inTime(n));
+ // Every expansion step must use the current frontier node, not the root.
+ // Previously the root-only filter made depths 2–4 indistinguishable.
+ function eligible(from,to){
+   if(from===to)return false;
+   if(lens==='influence')return !!influenceEither(from,to);
+   if(filterMode==='none')return false;
+   if(filterMode==='all')return true;
+   const source=from===selected?enabledTags(selected):attrs.get(from);
+   const target=attrs.get(to);
+   return cats.some(c=>[...source[c]].some(t=>target[c].has(t)));
+ }
+ const neighbors=new Map();
+ for(const n of pool){
+   const arr=pool.filter(x=>eligible(n,x))
+     .map(x=>({n:x,...similarity(n,x)}))
+     .filter(x=>x.score>=minMovementStrength)
+     .sort((a,b)=>b.score-a.score);
+   neighbors.set(n,arr);
+ }
+ const visited=new Map([[selected,0]]),order=[selected];
+ let frontier=[selected];
+ // Reserve capacity for subsequent rings so a large first ring doesn't
+ // exhaust the maximum movement count before multi-node depth can operate.
+ for(let hop=1;hop<=depth&&order.length<limit;hop++){
+   const candidates=[];
+   for(const n of frontier)for(const x of (neighbors.get(n)||[]))
+     if(!visited.has(x.n))candidates.push(x);
+   candidates.sort((a,b)=>b.score-a.score);
+   const remaining=limit-order.length;
+   const ringsLeft=depth-hop+1;
+   const quota=ringsLeft>1?Math.max(1,Math.min(Math.ceil(remaining/ringsLeft),Math.floor(limit/(depth+1)))):remaining;
+   const next=[];
+   for(const x of candidates){
+     if(visited.has(x.n)||next.length>=quota)continue;
+     visited.set(x.n,hop);order.push(x.n);next.push(x.n);
+   }
+   frontier=next;
+   if(!next.length)break;
+ }
+ shown=order;links=[];for(let i=0;i<shown.length;i++)for(let j=i+1;j<shown.length;j++){const s=similarity(shown[i],shown[j]);if(s.score>=minMovementStrength&&(eligible(shown[i],shown[j])||eligible(shown[j],shown[i])))links.push({a:shown[i],b:shown[j],...s})}
+positions=new Map([[selected,{x:0,y:0,z:0}]]);for(let d=1;d<=depth;d++){let ring=shown.filter(n=>visited.get(n)===d);ring.forEach((n,i)=>{let ang=i*2*Math.PI/Math.max(1,ring.length)+d*.7,r=125+d*165;let x=Math.cos(ang)*r,y=Math.sin(ang)*r,z=is3D?(years.get(n).start-years.get(selected).start)*3:0;positions.set(n,{x,y,z})})}
+for(let iter=0;iter<70;iter++)for(const e of links){let a=positions.get(e.a),b=positions.get(e.b),dx=b.x-a.x,dy=b.y-a.y,dist=Math.max(1,Math.hypot(dx,dy)),force=(dist-(110+(1-e.score)*95))*.006;if(e.a!==selected){a.x+=dx/dist*force;a.y+=dy/dist*force}if(e.b!==selected){b.x-=dx/dist*force;b.y-=dy/dist*force}}
+fit();profile();results();updateRange();renderButtons();}
+// Exploratory, transparent estimates. These are not historically verified measurements.
+// Scores are derived from existing movement descriptors and associated artist vocabulary.
+// A neutral score is used where the available data does not establish a direction.
+const aestheticSignals={
+  representational:-1,figurative:-.9,realism:-1,realist:-1,documentary:-.85,
+  portraiture:-.8,photography:-.55,landscape:-.6,naturalism:-1,
+  abstract:.9,abstraction:.9,nonrepresentational:1,geometric:.8,
+  minimal:.65,expressionism:.4,suprematism:1,cubism:.55,
+  constructivism:.7,op:.7,conceptual:.1,surreal:.05,
+  painting:0,installation:0,performance:0
+};
+const conceptualSignals={
+  conceptual:1,conceptualism:1,idea:1,ideas:1,systems:.85,
+  critique:.9,critical:.8,institutional:.95,political:.7,
+  intervention:.85,participatory:.7,performance:.5,language:.85,
+  appropriation:.8,fluxus:.85,dada:.8,readymade:1,
+  formal:-.9,form:-.65,decorative:-.75,craft:-.5,
+  optical:-.8,color:-.65,geometric:-.6,composition:-.7,
+  minimal:-.15,abstract:-.25,figurative:-.2
+};
+function interpretiveMovementScore(n,axis){
+  const signals=axis==='orientation'?aestheticSignals:conceptualSignals;
+  const descriptor=attrs.get(n)||{};
+  const words=[...n.replace(/[-_]/g,' ').split(/\s+/)];
+  for(const c of ['aesthetic','approach','subject','process']){
+    for(const tag of descriptor[c]||[])words.push(...String(tag).toLowerCase().split(/[\s/,_-]+/));
+  }
+  let weighted=0,weight=0;
+  for(const word of words){
+    const token=word.toLowerCase().replace(/[^a-z]/g,'');
+    if(Object.prototype.hasOwnProperty.call(signals,token)){
+      const value=signals[token];const w=1;
+      weighted+=value*w;weight+=w;
+    }
+  }
+  // Zero is an honest 'insufficient or mixed evidence' position.
+  return weight?Math.max(-1,Math.min(1,weighted/weight)):0;
+}
+function movementAxisCoordinate(n,axis){
+ const p=positions.get(n)||{x:0,y:0,z:0};
+ if(axis==='layoutX')return p.x;
+ if(axis==='layoutY')return p.y;
+ if(axis==='time')return (years.get(n).start-years.get(selected).start)*3;
+ if(axis==='orientation'||axis==='conceptual')return interpretiveMovementScore(n,axis)*310;
+ const tags=attrs.get(n)?.[axis]||new Set();
+ let v=0;for(const t of tags){let h=2166136261;for(const ch of t){h^=ch.charCodeAt(0);h=Math.imul(h,16777619)}v+=((h>>>0)/4294967295*2-1)*150}
+ return tags.size?v/Math.sqrt(tags.size):0;
+}
+function movementPositionForAxes(n){
+ if(!is3D)return mvPosition(n);
+ const base=mvPosition(n),p=positions.get(n)||{x:0,y:0,z:0};
+ const axisValue=(axis)=>{
+   if(axis==='layoutX')return base.x;
+   if(axis==='layoutY')return base.y;
+   if(axis==='time')return (years.get(n).start-years.get(selected).start)*3;
+   return movementAxisCoordinate(n,axis)-movementAxisCoordinate(selected,axis);
+ };
+ // Apply the existing movement animation *after* mapping the data axes.
+ // Previously only layoutX/layoutY used the animated position, so the default
+ // time/orientation/conceptual mapping appeared completely static.
+ const drift={x:base.x-p.x,y:base.y-p.y,z:base.z-p.z};
+ return {x:axisValue($('mv-axisX').value)+drift.x,
+         y:axisValue($('mv-axisY').value)+drift.y,
+         z:axisValue($('mv-axisZ').value)+drift.z};
+}
+function movementAxisLabel(axis){return $(axis).selectedOptions[0].text}
+function updateMovementAxisLegend(){
+ const el=document.querySelector('#movement-view .mv-axis-description');
+ if(el)el.textContent=['X','Y','Z'].map(a=>a+' = '+movementAxisLabel('mv-axis'+a)).join(' · ');
+}
+let mvLockedAxis='none',mvLockAngle=0;
+function project(p){
+ let x=p.x,y=p.y,depth=0;
+ if(is3D){
+  if(mvLockedAxis==='X'){
+   x=p.x;y=p.y*Math.cos(mvLockAngle)-p.z*Math.sin(mvLockAngle);
+   depth=p.y*Math.sin(mvLockAngle)+p.z*Math.cos(mvLockAngle);
+  }else if(mvLockedAxis==='Y'){
+   x=p.y;y=p.z*Math.cos(mvLockAngle)-p.x*Math.sin(mvLockAngle);
+   depth=p.z*Math.sin(mvLockAngle)+p.x*Math.cos(mvLockAngle);
+  }else if(mvLockedAxis==='Z'){
+   x=p.z;y=p.x*Math.cos(mvLockAngle)-p.y*Math.sin(mvLockAngle);
+   depth=p.x*Math.sin(mvLockAngle)+p.y*Math.cos(mvLockAngle);
+  }else{
+   const ca=Math.cos(yaw),sa=Math.sin(yaw),cp=Math.cos(pitch),sp=Math.sin(pitch);
+   const rx=p.x*ca-p.z*sa,rz=p.x*sa+p.z*ca;
+   x=rx;y=p.y*cp-rz*sp;depth=rz*cp+p.y*sp;
+  }
+  // A locked coordinate must retain a constant horizontal scale regardless of depth.
+  const perspective=800/(800+Math.max(-600,depth));
+  if(mvLockedAxis==='none')x*=perspective;
+  y*=perspective;
+ }
+ return{x:W/2+view.x+x*view.k,y:H/2+view.y+y*view.k};
+}
+function drawMovementWorldAxes(){
+ if(!is3D)return;
+ // Same projected world axes used in the artist map, centered on the active movement.
+ const origin=project({x:0,y:0,z:0});
+ const axes=[['X',{x:300,y:0,z:0},'#d04a26',movementAxisLabel('mv-axisX')],['Y',{x:0,y:300,z:0},'#1468a2',movementAxisLabel('mv-axisY')],['Z',{x:0,y:0,z:300},'#8b36a6',movementAxisLabel('mv-axisZ')]];
+ ctx.save();
+ for(const [name,v,color,description] of axes){
+   const a=project(v),b=project({x:-v.x*.65,y:-v.y*.65,z:-v.z*.65});
+   ctx.beginPath();ctx.moveTo(b.x,b.y);ctx.lineTo(a.x,a.y);
+   ctx.strokeStyle=color;ctx.lineWidth=2.4;ctx.stroke();
+   const angle=Math.atan2(a.y-origin.y,a.x-origin.x);
+   ctx.beginPath();ctx.moveTo(a.x,a.y);
+   ctx.lineTo(a.x-11*Math.cos(angle-.45),a.y-11*Math.sin(angle-.45));
+   ctx.lineTo(a.x-11*Math.cos(angle+.45),a.y-11*Math.sin(angle+.45));
+   ctx.closePath();ctx.fillStyle=color;ctx.fill();
+   ctx.font='bold 13px system-ui';ctx.textAlign='left';
+   const tx=Math.max(8,Math.min(W-170,a.x+12)),ty=Math.max(18,Math.min(H-12,a.y-12));
+   ctx.fillText(name+' — '+description,tx,ty);
+ }
+ ctx.restore();
+}
+function draw(){ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,W,H);drawMovementWorldAxes();if($('mv-lines').checked)for(const e of links){const a=project(movementPositionForAxes(e.a)),b=project(movementPositionForAxes(e.b));ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);const inf=influenceEither(e.a,e.b);
+ ctx.strokeStyle=lens==='influence'?(inf?'rgba(246,190,103,.88)':'rgba(151,177,195,.12)'):(e.h?'rgba(226,173,119,.44)':'rgba(151,177,195,.21)');
+ ctx.lineWidth=inf&&lens==='influence'?2.3:e.h?1.8:1;ctx.stroke();
+ if(inf&&lens==='influence'){const forward=inf[0]===e.a,from=forward?a:b,to=forward?b:a,ang=Math.atan2(to.y-from.y,to.x-from.x),px=to.x-Math.cos(ang)*13,py=to.y-Math.sin(ang)*13;
+ ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(px-9*Math.cos(ang-.5),py-9*Math.sin(ang-.5));ctx.moveTo(px,py);ctx.lineTo(px-9*Math.cos(ang+.5),py-9*Math.sin(ang+.5));ctx.stroke();}
+ }
+for(const n of shown){const p=project(movementPositionForAxes(n)),sel=n===selected;ctx.beginPath();ctx.arc(p.x,p.y,sel?9:n===hover?7:5,0,Math.PI*2);ctx.fillStyle=sel?'#e2ad77':n===hover?'#f4d7a9':'#90b9c8';ctx.fill();ctx.font=(sel?'bold 15':'12')+'px system-ui,sans-serif';ctx.textAlign='center';ctx.lineWidth=3;ctx.strokeStyle='#131b22';ctx.fillStyle=sel?'#ffe6c3':'#e6ebed';ctx.strokeText(title(n),p.x,p.y-13);ctx.fillText(title(n),p.x,p.y-13)}}
+function resize(){let r=stage.getBoundingClientRect();W=Math.max(100,r.width);H=Math.max(100,r.height);dpr=Math.min(2,devicePixelRatio||1);canvas.width=Math.round(W*dpr);canvas.height=Math.round(H*dpr);draw()}
+function fit(){let maxX=220,maxY=200;for(const p of positions.values()){maxX=Math.max(maxX,Math.abs(p.x)+110);maxY=Math.max(maxY,Math.abs(p.y)+70)}view={x:0,y:0,k:Math.min(1.5,W/(2*maxX),H/(2*maxY))};draw()}
+function profile(){const el=$('mv-profile');el.replaceChildren();const add=(tag,txt,cls)=>{let e=document.createElement(tag);e.textContent=txt;if(cls)e.className=cls;el.appendChild(e);return e};const date=years.get(selected),a=members.get(selected)||[];
+add('h3',title(selected));window.atlasResearchLinks(el,title(selected),'movement');add('p',`${date.start}${date.end!==date.start?'–'+date.end:''} · ${a.length} artists in starter dataset`,'mv-meta');add('p',date.source,'mv-meta');add('p',descriptions[selected]||'Exploratory movement classification; historical scope and associations require further scholarly verification.','mv-meta');
+let actions=add('div','','mv-actions');let clear=document.createElement('button');clear.className='mv-btn';clear.textContent='Clear filters';clear.onclick=()=>{filterMode='none';active.clear();recompute()};actions.appendChild(clear);let allBtn=document.createElement('button');allBtn.className='mv-btn';allBtn.textContent='Show all related';allBtn.onclick=()=>{filterMode='all';active.clear();recompute()};actions.appendChild(allBtn);
+add('p','Click attributes to build connections. Yellow means enabled.','mv-meta');const A=attrs.get(selected);for(const c of cats){if(!A[c].size)continue;add('h4',({subject:'Subjects & themes',aesthetic:'Aesthetics',approach:'Ideas & approaches',process:'Processes'})[c]);let wrap=add('div','','mv-tags');for(const t of [...A[c]].sort()){const b=document.createElement('button');b.className='mv-tag-btn';b.textContent=t;const on=filterMode==='all'||(filterMode==='custom'&&(active.get(c)||new Set()).has(t));if(on)b.classList.add('on');b.onclick=()=>{if(filterMode==='all'){active=new Map(cats.map(k=>[k,new Set(A[k])]));filterMode='custom'}else if(filterMode==='none'){active=new Map();filterMode='custom'}let set=active.get(c)||new Set();if(set.has(t))set.delete(t);else set.add(t);active.set(c,set);recompute()};wrap.appendChild(b)}}
+add('h2','Influences (curated examples)');
+ const incoming=influences.filter(e=>e[1]===selected),outgoing=influences.filter(e=>e[0]===selected);
+ if(!incoming.length&&!outgoing.length)add('p','No directional influence records currently curated for this movement. This does not imply none exist.','mv-meta');
+ for(const e of incoming){const b=add('button','← Influenced by '+title(e[0])+' · '+e[2],'mv-btn mv-item');b.onclick=()=>select(e[0]);}
+ for(const e of outgoing){const b=add('button','→ Influenced '+title(e[1])+' · '+e[2],'mv-btn mv-item');b.onclick=()=>select(e[1]);}
+ add('p','Arrows in the Influence lens point from an earlier source toward the influenced movement. Curated examples require source documentation before scholarly publication.','mv-meta');
+ add('h2','Related movements');for(const n of shown.slice(1,10)){const s=similarity(selected,n),b=add('button',title(n)+(influenceEither(selected,n)?' · influence':s.h?' · historical':' · shared attributes'),'mv-btn mv-item');b.onclick=()=>select(n)}
+add('h2','Associated artists');
+ const directIds=new Set(a.map(x=>x.id));
+ const Aselected=attrs.get(selected);
+ const relatedCandidates=artists.filter(x=>!directIds.has(x.id)).map(x=>{
+ let score=0;for(const c of cats){const tags=c==='subject'?x.theme||[]:c==='aesthetic'?x.aesthetic||[]:c==='process'?x.process||[]:[...(x.theme||[]),...(x.process||[])];
+ for(const t of tags)if(Aselected[c]?.has(tidy(t)))score+=c==='subject'?3:2;}
+ return {artist:x,score};}).sort((a,b)=>b.score-a.score||a.artist.name.localeCompare(b.artist.name));
+ const inferred=relatedCandidates.slice(0,Math.max(0,3-a.length)).map(x=>x.artist);
+ if(inferred.length)add('p','Additional artists below are suggested by shared classifications, not verified movement membership.','mv-meta');
+ for(const artist of [...a.slice(0,18),...inferred]){let b=add('button',artist.name+(directIds.has(artist.id)?'':' · suggested affinity'),'mv-btn mv-item');b.onclick=()=>{$('artist-mode').click();if(typeof window.atlasSelectArtist==='function')window.atlasSelectArtist(artist.id);else{const search=$('search');search.value=artist.name;search.dispatchEvent(new Event('change',{bubbles:true}))}}}
+}
+function renderButtons(){$('mv-map-title').textContent=title(selected)+' · movement network';$('mv-lens').value=lens;$('mv-depth-label').textContent=depth+' nodes';$('mv-count-label').textContent=limit}
+function updateRange(){let y=years.get(selected).start;$('mv-before-val').textContent=before;$('mv-after-val').textContent=after;$('mv-time-label').textContent=`${y-before}–${y+after} (movement start: ${y})`;for(const b of document.querySelectorAll('#movement-view [data-mv-years]')){let n=+b.dataset.mvYears;b.classList.toggle('active',n===before&&n===after)}}
+function results(){let q=$('mv-search').value.toLowerCase().trim(),out=$('mv-results');out.replaceChildren();if(!q)return;for(const n of all.filter(n=>n.includes(q)).slice(0,15)){let b=document.createElement('button');b.className='mv-btn mv-item'+(n===selected?' active':'');b.textContent=title(n);b.onclick=()=>{select(n);out.replaceChildren()};out.appendChild(b)}}
+function select(n){if(!all.includes(n)||n===selected)return;window.atlasMovementManuallyChosen=true;mvSurge();selected=n;if(filterMode==='custom'){const A=attrs.get(n);active=new Map(cats.map(c=>[c,new Set([...(active.get(c)||[])].filter(t=>A[c].has(t)))]))}recompute()}
+function pointer(e){let r=canvas.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top}}
+function hit(e){let p=pointer(e),best=null,dist=28;for(const n of shown){let q=project(movementPositionForAxes(n)),d=Math.hypot(p.x-q.x,p.y-q.y);if(d<dist){dist=d;best=n}}return best}
+canvas.addEventListener('pointerdown',e=>{drag={p:pointer(e),x:view.x,y:view.y,yaw,pitch,lockAngle:mvLockAngle,moved:false,rotate:is3D&&!e.shiftKey};canvas.setPointerCapture(e.pointerId)});
+canvas.addEventListener('pointermove',e=>{if(drag){let p=pointer(e);if(Math.hypot(p.x-drag.p.x,p.y-drag.p.y)>4)drag.moved=true;if(drag.rotate){if(mvLockedAxis!=='none'){view.x=drag.x+p.x-drag.p.x;mvLockAngle=drag.lockAngle+(p.y-drag.p.y)*.007}else{yaw=drag.yaw+(p.x-drag.p.x)*.007;pitch=Math.max(-1.4,Math.min(1.4,drag.pitch+(p.y-drag.p.y)*.007))}}else{view.x=drag.x+p.x-drag.p.x;view.y=drag.y+p.y-drag.p.y}draw()}else{let n=hit(e);if(n!==hover){hover=n;draw()}canvas.style.cursor=n?'pointer':is3D?'move':'grab'}});
+canvas.addEventListener('pointerup',e=>{if(drag&&!drag.moved){let n=hit(e);if(n)select(n)}drag=null});
+canvas.addEventListener('wheel',e=>{e.preventDefault();view.k=Math.max(.2,Math.min(3,view.k*(e.deltaY>0?.9:1.1)));draw()},{passive:false});
+
+ let mvLastFrame=0;
+ function animateMovements(t){requestAnimationFrame(animateMovements);
+ if(!document.body.classList.contains('movement-mode')||document.hidden||!mvMotionEnabled||t-mvLastFrame<40)return;
+ mvLastFrame=t;mvMotionClock=t/1000;draw();}
+ requestAnimationFrame(animateMovements);
+ for(const axis of ['X','Y','Z'])$('mv-axis'+axis).addEventListener('change',()=>{updateMovementAxisLegend();draw()});updateMovementAxisLegend();$('mv-horizontalLock').addEventListener('change',e=>{mvLockedAxis=e.target.value;mvLockAngle=0;view.x=view.y=0;draw()});$('mv-search').addEventListener('input',results);$('mv-lens').addEventListener('change',e=>{lens=e.target.value;recompute()});$('mv-depth').addEventListener('input',e=>{depth=+e.target.value;recompute()});$('mv-count').addEventListener('input',e=>{limit=+e.target.value;recompute()});$('mv-strength').addEventListener('input',recompute);$('mv-lines').addEventListener('change',draw);
+$('mv-before').addEventListener('input',e=>{before=+e.target.value;recompute()});$('mv-after').addEventListener('input',e=>{after=+e.target.value;recompute()});
+for(const b of document.querySelectorAll('#movement-view [data-mv-years]'))b.addEventListener('click',()=>{before=after=+b.dataset.mvYears;$('mv-before').value=before;$('mv-after').value=after;recompute()});
+$('mv-zoom-in').onclick=()=>{view.k*=1.2;draw()};$('mv-zoom-out').onclick=()=>{view.k/=1.2;draw()};$('mv-fit').onclick=fit;$('mv-center').onclick=()=>{const p=positions.get(selected);if(!p)return;view.x=-p.x*view.k;view.y=-p.y*view.k;draw()};
+window.atlasSelectMovement=n=>{const id=tidy(n);if(all.includes(id)){window.atlasMovementManuallyChosen=true;if(id===selected)recompute();else select(id);return true}return false};
+window.atlasCurrentMovement=()=>title(selected);
+ function preferredMovementForArtist(artist){if(!artist)return null;
+ const options=(artist.movement||[]).map(tidy).filter(m=>all.includes(m));
+ if(!options.length)return null;
+ const generic=new Set(['contemporary art','contemporary painting','contemporary photography','modern art']);
+ return options.sort((a,b)=>Number(generic.has(a))-Number(generic.has(b))||((members.get(b)||[]).length-(members.get(a)||[]).length))[0];}
+ $('movement-mode').onclick=()=>{const current=typeof window.atlasCurrentArtist==='function'?window.atlasCurrentArtist():null;const preferred=preferredMovementForArtist(current);if(!window.atlasMovementManuallyChosen&&preferred&&preferred!==selected){selected=preferred;mvSurge();}document.body.classList.add('movement-mode');$('movement-mode').classList.add('active');$('artist-mode').classList.remove('active');resize();recompute()};
+$('artist-mode').onclick=()=>{document.body.classList.remove('movement-mode');$('artist-mode').classList.add('active');$('movement-mode').classList.remove('active');window.dispatchEvent(new Event('resize'))};
+window.addEventListener('resize',()=>{if(document.body.classList.contains('movement-mode'))resize()});
+})();
+
+</script><script>
+function atlasDownloadBlob(blob,filename){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2000)}
+function atlasExportCanvas(canvas,kind,prefix){
+ // Snapshot the already-rendered map: no fitting, recentering or graph regeneration.
+ // Match the displayed viewport rather than exporting a different camera state.
+ const stage=canvas.parentElement;
+ const rect=canvas.getBoundingClientRect();
+ const scale=Math.min(2,window.devicePixelRatio||1);
+ const w=Math.round(rect.width*scale),h=Math.round(rect.height*scale);
+ if(!w||!h)return;
+ const snapshot=document.createElement('canvas');snapshot.width=w;snapshot.height=h;
+ const c=snapshot.getContext('2d');
+ c.setTransform(scale,0,0,scale,0,0);
+ // The map's actual dark background (JPEG should not replace it with white).
+ const bg=c.createRadialGradient(rect.width*.45,rect.height*.45,0,rect.width*.45,rect.height*.45,Math.max(rect.width,rect.height)*.72);
+ bg.addColorStop(0,'#202a32');bg.addColorStop(1,'#121820');
+ c.fillStyle=bg;c.fillRect(0,0,rect.width,rect.height);
+ c.drawImage(canvas,0,0,rect.width,rect.height);
+ // Include map labels and status overlays, just as they appear on screen.
+ for(const el of stage.querySelectorAll('.overlay,.hint,.mv-overlay')){
+   if(el.offsetParent===null)continue;
+   const r=el.getBoundingClientRect(),style=getComputedStyle(el);
+   const x=r.left-rect.left,y=r.top-rect.top;
+   c.fillStyle=style.color||'#aab7c2';
+   const fontSize=parseFloat(style.fontSize)||12;
+   c.font=fontSize+'px '+(style.fontFamily||'sans-serif');
+   let ty=y+fontSize+9;
+   const text=(el.innerText||'').split(/\n/);
+   for(const line of text){if(line.trim()){c.fillText(line.trim(),x+12,ty,r.width-20);ty+=fontSize*1.5;}}
+ }
+ snapshot.toBlob(blob=>{if(blob)atlasDownloadBlob(blob,prefix+(kind==='png'?'.png':'.jpg'))},
+   kind==='png'?'image/png':'image/jpeg',.95);
+}
+document.getElementById('export-png').onclick=()=>atlasExportCanvas(document.getElementById('scene'),'png','art-atlas-3d-artists');
+document.getElementById('export-jpeg').onclick=()=>atlasExportCanvas(document.getElementById('scene'),'jpeg','art-atlas-3d-artists');
+document.getElementById('mv-export-png').onclick=()=>atlasExportCanvas(document.getElementById('movement-canvas'),'png','art-atlas-3d-movements');
+document.getElementById('mv-export-jpeg').onclick=()=>atlasExportCanvas(document.getElementById('movement-canvas'),'jpeg','art-atlas-3d-movements');
+</script>
+
+
+<script id="atlas-persistent-settings">
+(function(){
+  const shared=['yearsBefore','yearsAfter','depth','mv-lens','mv-depth','mv-count','mv-strength','mv-lines','mv-before','mv-after','mv-axisX','mv-axisY','mv-axisZ'];
+  const equivalent={threshold:'minimum',limit:'count'};
+  const synchronizedSliders={depth:['depth','mv-depth'],nodes:['limit','count','mv-count']};
+  let applying=false;
+  function control(id){return document.getElementById(id)}
+  function read(el){return el.type==='checkbox'?el.checked:el.value}
+  function apply(id,value){
+    const el=control(id);if(!el||value===undefined)return;
+    if(el.type==='checkbox')el.checked=!!value;
+    else {
+      if(el.tagName==='SELECT' && !Array.from(el.options).some(o=>o.value===String(value)))return;
+      el.value=String(value);
+    }
+    el.dispatchEvent(new Event(el.type==='checkbox'||el.tagName==='SELECT'?'change':'input',{bubbles:true}));
+  }
+  function snapshot(){
+    const settings={};
+    for(const id of [...shared,'threshold','limit','minimum','count','edges']){
+      const el=control(id);if(el)settings[id]=read(el);
+    }
+    const artist=window.atlasCurrentArtist?.();
+    const movement=window.atlasCurrentMovement?.() || (control('mv-map-title')?.textContent||'').split(' · ')[0].trim();
+    const movementMode=document.body.classList.contains('movement-mode');
+    const activeDepth=control(movementMode?'mv-depth':'depth');
+    const activeNodes=control(movementMode?'mv-count':(control('count')?'count':'limit'));
+    settings.nodeDepth=activeDepth?.value??'2';
+    settings.maxNodes=activeNodes?.value??'20';
+    return {settings,artistId:artist?.id??null,movement,mode:document.body.classList.contains('movement-mode')?'movements':'artists'};
+  }
+  function restore(state){
+    if(!state||applying)return;
+    applying=true;
+    try{
+      const settings=state.settings||{};
+      // Activate the destination mode BEFORE selecting its node.
+      const movement=state.mode==='movements';
+      if(movement&&!document.body.classList.contains('movement-mode')){window.atlasMovementManuallyChosen=true;control('movement-mode')?.click();}
+      if(!movement&&document.body.classList.contains('movement-mode'))control('artist-mode')?.click();
+      for(const id of shared)if(id in settings && !['depth','mv-depth','mv-count'].includes(id))apply(id,settings[id]);
+      const threshold=settings.threshold??settings.minimum;
+      if(threshold!==undefined){apply('threshold',threshold);apply('minimum',threshold)}
+      if('edges' in settings)apply('edges',settings.edges);
+      const d=settings.nodeDepth??settings[state.mode==='movements'?'mv-depth':'depth']??settings.depth;
+      const n=settings.maxNodes??settings[state.mode==='movements'?'mv-count':(control('count')?'count':'limit')]??settings.count??settings.limit;
+      if(d!==undefined)for(const id of synchronizedSliders.depth)apply(id,d);
+      if(n!==undefined)for(const id of synchronizedSliders.nodes)apply(id,n);
+      if(movement){
+        window.atlasMovementManuallyChosen=true;
+        if(state.movement)window.atlasSelectMovement?.(state.movement);
+      }else if(state.artistId!==null&&state.artistId!==undefined){
+        window.atlasSelectArtist?.(state.artistId);
+      }
+    }finally{applying=false}
+  }
+  // Keep both preferences synchronized between tabs, including synthetic updates.
+  function syncSliders(e){
+    if(applying)return;
+    const id=e.target?.id;
+    const group=synchronizedSliders.depth.includes(id)?synchronizedSliders.depth:
+      synchronizedSliders.nodes.includes(id)?synchronizedSliders.nodes:null;
+    if(!group)return;
+    applying=true;
+    try{for(const other of group)if(other!==id)apply(other,e.target.value)}
+    finally{applying=false}
+  }
+  document.addEventListener('input',syncSliders,true);
+  window.atlasSharedState={snapshot,restore};
+  window.addEventListener('message',e=>{
+    if(e.source!==parent||e.data?.app!=='art-atlas')return;
+    if(e.data.kind==='request-state')parent.postMessage({app:'art-atlas',kind:'state',state:snapshot()},'*');
+    if(e.data.kind==='restore-state')restore(e.data.state);
+  });
+  // Report edits, not only artist selection, to the unified controller.
+  document.addEventListener('input',e=>{
+    if(applying||!e.target?.id)return;
+    if([...shared,'threshold','limit','minimum','count','edges'].includes(e.target.id))
+      parent.postMessage({app:'art-atlas',kind:'settings-changed',state:snapshot()},'*');
+  },true);
+  document.addEventListener('change',e=>{
+    if(applying||!e.target?.id)return;
+    if([...shared,'threshold','limit','minimum','count','edges'].includes(e.target.id))
+      parent.postMessage({app:'art-atlas',kind:'settings-changed',state:snapshot()},'*');
+  },true);
+})();
+</script>
+</body></html>

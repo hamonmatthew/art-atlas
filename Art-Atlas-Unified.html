@@ -1,0 +1,125 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Art Atlas — Unified Explorer</title>
+<style>
+html,body{margin:0;height:100%;background:#121920;color:#e4ebef;font-family:system-ui,Arial,sans-serif}
+#shell{height:100%;display:flex;flex-direction:column}
+#bar{display:flex;align-items:center;gap:12px;padding:8px 16px;background:#1a242d;border-bottom:1px solid #384753;min-height:38px}
+#bar strong{font-size:13px;letter-spacing:.12em}#bar button{cursor:pointer;border:1px solid #80603e;color:#e2ad77;background:#26313d;border-radius:7px;padding:7px 14px;font-weight:600}
+#bar button[aria-pressed=true]{background:#e2ad77;color:#17202a}#status{font-size:12px;color:#a8b7c2;margin-left:auto}
+#frames{flex:1;min-height:0;position:relative}iframe{width:100%;height:100%;border:0;position:absolute;inset:0;background:#121920}
+iframe[hidden]{display:none}
+
+/* Prototype attribution — visible in each standalone and unified header. */
+.atlas-prototype-credit{display:inline-flex;align-items:center;gap:10px;flex-wrap:wrap;font:500 11px/1.3 system-ui,-apple-system,sans-serif;letter-spacing:.04em;color:#b9c5cc;white-space:nowrap}
+.atlas-prototype-label{color:#e2ad77;border:1px solid #80603e;border-radius:4px;padding:3px 7px;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+@media(max-width:850px){.atlas-prototype-credit{white-space:normal;font-size:10px;gap:5px}}
+</style></head><body><div id="shell"><div id="bar"><strong>ART ATLAS</strong><span class="atlas-prototype-credit"><span class="atlas-prototype-label">Prototype</span><span>© Matthew Hamon</span></span><button id="b2" aria-pressed="true">2D Atlas</button><button id="b3" aria-pressed="false">3D Atlas</button><a id="research-link" href="research.html" target="_blank" rel="noopener" style="color:#e2ad77;border:1px solid #80603e;border-radius:7px;padding:7px 12px;text-decoration:none;font-size:12px;font-weight:600">Research dataset (305 + 207)</a><span id="status">Unified workspace · shared artist and movement selection</span></div><div id="frames"><iframe id="f2" title="Art Atlas 2D" src="index.html"></iframe><iframe id="f3" title="Art Atlas 3D" src="spatial.html" hidden></iframe></div></div>
+<script>
+const frames={two:document.getElementById('f2'),three:document.getElementById('f3')};
+let active='two',latestState=null;
+// Authoritative workspace preferences. Updated directly from user input in either iframe.
+const sharedSliders={nodeDepth:'2',maxNodes:'20'};
+const sliderGroups={nodeDepth:['depth','mv-depth'],maxNodes:['limit','count','mv-count']};
+let syncingSliders=false;
+function captureSliders(which){
+ const w=frames[which].contentWindow,doc=w?.document;
+ if(!doc)return;
+ const movement=doc.body.classList.contains('movement-mode');
+ for(const [key,id] of [['nodeDepth',movement?'mv-depth':'depth'],
+   ['maxNodes',movement?'mv-count':(doc.getElementById('count')?'count':'limit')]]){
+   const el=doc.getElementById(id);if(el)sharedSliders[key]=el.value;
+ }
+}
+function enforceSliders(which){
+ const w=frames[which].contentWindow,doc=w?.document;
+ if(!doc||syncingSliders)return;
+ syncingSliders=true;
+ try{
+  for(const [key,ids] of Object.entries(sliderGroups))for(const id of ids){
+   const el=doc.getElementById(id);if(!el||el.value===sharedSliders[key])continue;
+   el.value=sharedSliders[key];
+   el.dispatchEvent(new w.Event('input',{bubbles:true}));
+   el.dispatchEvent(new w.Event('change',{bubbles:true}));
+  }
+ }finally{syncingSliders=false}
+}
+function connectSliderEvents(which){
+ const w=frames[which].contentWindow,doc=w?.document;
+ if(!doc||doc.__atlasSliderBridge)return;
+ doc.__atlasSliderBridge=true;
+ // Capturing listeners see the user's changed value before any renderer re-renders.
+ doc.addEventListener('input',e=>{
+  if(syncingSliders)return;
+  for(const [key,ids] of Object.entries(sliderGroups))if(ids.includes(e.target?.id)){
+   sharedSliders[key]=e.target.value;
+   // Keep both renderers' inactive sliders aligned too.
+   enforceSliders(which==='two'?'three':'two');
+   break;
+  }
+ },true);
+ enforceSliders(which);
+}
+function stateFrom(which){
+ try{return frames[which].contentWindow.atlasSharedState?.snapshot()||null}catch(e){console.warn('Unable to read state',e);return null}
+}
+function restoreTo(which,state){
+ if(!state)return false;
+ try{
+   const w=frames[which].contentWindow;
+   if(!w.atlasSharedState)return false;
+   // Explicit movement selections must not be replaced by an artist's suggested movement.
+   if(state.mode==='movements')w.atlasMovementManuallyChosen=true;
+   // Renderer restore may fire synthetic slider events. Keep canonical values authoritative.
+   syncingSliders=true;
+   try{w.atlasSharedState.restore({...state,settings:{...state.settings,...sharedSliders}})}
+   finally{syncingSliders=false}
+   enforceSliders(which);
+   const actual=w.atlasSharedState.snapshot();
+   const correctMode=actual.mode===state.mode;
+   const correctNode=state.mode==='movements'
+     ? actual.movement?.toLowerCase()===state.movement?.toLowerCase()
+     : actual.artistId===state.artistId;
+   if(!correctMode||!correctNode){
+     // Restore once more after forcing the destination's mode; do not silently accept defaults.
+     if(state.mode==='movements'){
+       w.document.getElementById('movement-mode')?.click();
+       w.atlasSelectMovement?.(state.movement);
+     }else{
+       w.document.getElementById('artist-mode')?.click();
+       if(state.artistId!=null)w.atlasSelectArtist?.(state.artistId);
+     }
+   }
+   return true;
+ }catch(e){console.warn('State restore failed',e);return false}
+}
+function show(which){
+ if(which===active)return;
+ captureSliders(active);
+ const source=stateFrom(active);
+ if(source){source.settings={...source.settings,...sharedSliders};latestState=source;}
+ active=which;
+ frames.two.hidden=which!=='two';frames.three.hidden=which!=='three';
+ document.getElementById('b2').setAttribute('aria-pressed',which==='two');
+ document.getElementById('b3').setAttribute('aria-pressed',which==='three');
+ // Reapply once the destination renderer has a visible canvas size.
+ restoreTo(which,latestState);
+ requestAnimationFrame(()=>{
+   restoreTo(which,latestState);
+   enforceSliders(which);
+   frames[which].contentWindow?.dispatchEvent(new Event('resize'));
+ });
+}
+document.getElementById('b2').onclick=()=>show('two');
+document.getElementById('b3').onclick=()=>show('three');
+window.addEventListener('message',e=>{
+ if(e.data?.app!=='art-atlas')return;
+ if(e.data.kind==='toggle'){show(active==='two'?'three':'two');return}
+ if(e.source!==frames[active].contentWindow)return;
+ if(e.data.kind==='settings-changed'&&e.data.state){latestState=e.data.state;latestState.settings={...latestState.settings,...sharedSliders};}
+});
+frames.two.onload=()=>{connectSliderEvents('two');if(latestState)restoreTo('two',latestState);enforceSliders('two')};
+frames.three.onload=()=>{connectSliderEvents('three');if(latestState)restoreTo('three',latestState);enforceSliders('three')};
+// Handle frames that finished loading before their handlers were registered.
+for(const which of ['two','three']){
+ try{if(frames[which].contentWindow.document.readyState==='complete')connectSliderEvents(which)}catch(e){}
+}
+</script></body></html>
