@@ -1,0 +1,1 @@
+v16: Fixed spatial.html movement view referencing missing #artist-data; uses window.ATLAS_CURATED_ARTISTS. Removed artist datalist and replaced with text search. Cache-busted curated dataset. index.html continues to link to spatial.html.
