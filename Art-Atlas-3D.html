@@ -263,7 +263,7 @@ try{if(location.hash.startsWith('#atlas=')){const state=JSON.parse(decodeURIComp
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const artists=JSON.parse($('artist-data').textContent);
+const artists=window.ATLAS_CURATED_ARTISTS;
 const is3D=document.body.dataset.atlasDimension==='3d';
 const tidy=s=>String(s||'').toLowerCase().trim();
 const title=s=>s.split(' ').map(w=>w==='dada'?'Dada':w.charAt(0).toUpperCase()+w.slice(1)).join(' ');
