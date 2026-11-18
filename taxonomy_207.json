@@ -489,7 +489,9 @@
     "period_note": "Dates not yet verified for this entry",
     "region": [],
     "description": "",
-    "related_movements": [],
+    "related_movements": [
+      "neo-dada"
+    ],
     "source_status": "proposed taxonomy; not individually verified",
     "review_status": "pending scholarly review"
   },
@@ -749,7 +751,9 @@
     "period_note": "Dates not yet verified for this entry",
     "region": [],
     "description": "",
-    "related_movements": [],
+    "related_movements": [
+      "neo-dada"
+    ],
     "source_status": "proposed taxonomy; not individually verified",
     "review_status": "pending scholarly review"
   },
@@ -2735,7 +2739,10 @@
     "period_note": "Requires research",
     "region": [],
     "description": "",
-    "related_movements": [],
+    "related_movements": [
+      "dada",
+      "fluxus"
+    ],
     "source_status": "proposed taxonomy; not individually verified",
     "review_status": "pending scholarly review"
   },
