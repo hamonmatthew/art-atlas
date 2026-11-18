@@ -1,4 +1,4 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Art Atlas — Unified Explorer</title>
+<!doctype html><html lang="en"><head><meta http-equiv="Cache-Control" content="no-cache, must-revalidate"><meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Art Atlas — Unified Explorer</title>
 <style>
 html,body{margin:0;height:100%;background:#121920;color:#e4ebef;font-family:system-ui,Arial,sans-serif}
 #shell{height:100%;display:flex;flex-direction:column}
@@ -12,7 +12,7 @@ iframe[hidden]{display:none}
 .atlas-prototype-credit{margin-left:auto;display:inline-flex;align-items:center;gap:10px;flex-wrap:wrap;font:500 11px/1.3 system-ui,-apple-system,sans-serif;letter-spacing:.04em;color:#b9c5cc;white-space:nowrap}
 .atlas-prototype-label{color:#e2ad77;border:1px solid #80603e;border-radius:4px;padding:3px 7px;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
 @media(max-width:850px){.atlas-prototype-credit{white-space:normal;font-size:10px;gap:5px}}
-</style></head><body><div id="shell"><div id="bar"><strong>ART ATLAS</strong><button id="b2" aria-pressed="true">2D Atlas</button><button id="b3" aria-pressed="false">3D Atlas</button><a id="research-link" href="research.html" target="_blank" rel="noopener" style="color:#e2ad77;border:1px solid #80603e;border-radius:7px;padding:7px 12px;text-decoration:none;font-size:12px;font-weight:600">Research dataset (305 + 207)</a><span class="atlas-prototype-credit"><span class="atlas-prototype-label">Prototype</span><span>© Matthew Hamon</span></span><span id="status">Unified workspace · shared artist and movement selection</span></div><div id="frames"><iframe id="f2" title="Art Atlas 2D" src="index.html"></iframe><iframe id="f3" title="Art Atlas 3D" src="spatial.html" hidden></iframe></div></div>
+</style></head><body><div id="shell"><div id="bar"><strong>ART ATLAS</strong><button id="b2" aria-pressed="true">2D Atlas</button><button id="b3" aria-pressed="false">3D Atlas</button><a id="research-link" href="research.html?v=17-20261118" target="_blank" rel="noopener" style="color:#e2ad77;border:1px solid #80603e;border-radius:7px;padding:7px 12px;text-decoration:none;font-size:12px;font-weight:600">Research dataset (305 + 207)</a><span class="atlas-prototype-credit"><span class="atlas-prototype-label">Prototype</span><span>© Matthew Hamon</span></span><span id="status">Unified workspace · shared artist and movement selection</span></div><div id="frames"><iframe id="f2" title="Art Atlas 2D" src="index.html"></iframe><iframe id="f3" title="Art Atlas 3D" src="spatial.html" hidden></iframe></div></div>
 <script>
 const frames={two:document.getElementById('f2'),three:document.getElementById('f3')};
 let active='two',latestState=null;
